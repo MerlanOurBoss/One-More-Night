@@ -38,6 +38,7 @@ public class NightLoop : MonoBehaviour
     [SerializeField] PhotoPrint photoPrint;
     [SerializeField] NoteCollection notes;
     [SerializeField] SafeLock safeLock;
+    [SerializeField] DoorSwing[] insideDoors = new DoorSwing[0];
     [SerializeField] ControlHints hints;
     [SerializeField] GameObject titleScreen;
 
@@ -263,12 +264,15 @@ public class NightLoop : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, reach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             return null;
         bool day = CurrentPhase == Phase.Day;
-        bool usable = hit.collider == futon || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
+        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
         return usable ? hit.collider : null;
     }
 
     string PromptFor(Collider target)
     {
+        DoorSwing swing = target.GetComponent<DoorSwing>();
+        if (swing != null)
+            return swing.IsOpen ? "закрыть дверь" : "открыть дверь";
         if (notes.IsNote(target))
             return "прочитать";
         if (safeLock.IsLocked(target))
@@ -281,6 +285,12 @@ public class NightLoop : MonoBehaviour
     void Use(Collider target)
     {
         hints.MarkUsed(PromptFor(target));
+        DoorSwing swing = target.GetComponent<DoorSwing>();
+        if (swing != null)
+        {
+            swing.Toggle();
+            return;
+        }
         if (notes.IsNote(target))
             notes.Open();
         else if (safeLock.IsLocked(target))
@@ -592,6 +602,8 @@ public class NightLoop : MonoBehaviour
         photoPrint.Clear();
         notes.Clear();
         safeLock.Clear();
+        foreach (DoorSwing swing in insideDoors)
+            swing.Restore();
         BackToDay();
     }
 

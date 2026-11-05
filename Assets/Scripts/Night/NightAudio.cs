@@ -29,6 +29,8 @@ public class NightAudio : MonoBehaviour
     [SerializeField] AudioClip mutter;
     [SerializeField] AudioClip outside;
     [SerializeField] AudioClip paper;
+    [SerializeField] AudioClip doorOpen;
+    [SerializeField] AudioClip doorClose;
     [SerializeField] AudioClip[] footsteps;
 
     [Header("Mix")]
@@ -147,5 +149,7 @@ public class NightAudio : MonoBehaviour
     public void PlayOutside() => camera2D.PlayOneShot(outside);
     public void StopCamera() => camera2D.Stop();
     public void PlayPaper() => camera2D.PlayOneShot(paper);
+    public void PlayDoorOpen() => camera2D.PlayOneShot(doorOpen);
+    public void PlayDoorClose() => camera2D.PlayOneShot(doorClose);
     public void PlayCreakAt(Vector3 position) => PlayInWorld(creak, position);
 }
