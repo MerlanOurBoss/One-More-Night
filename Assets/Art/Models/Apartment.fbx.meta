@@ -62,6 +62,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: M_Figure
+    second: {fileID: 2100000, guid: b7f3cb3c5aacfd24a8e20b7e2c50d96b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: M_Ghost
     second: {fileID: 2100000, guid: eebe3ea2e350e7849b25ccc2de2c9c1a, type: 2}
   - first:

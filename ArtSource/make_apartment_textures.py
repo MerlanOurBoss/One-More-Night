@@ -109,7 +109,11 @@ for r in range(W // bh):
         img[r * bh:(r + 1) * bh, x0:x1] = tone
         img[r * bh:(r + 1) * bh, x0] = (0.55, 0.52, 0.47)
     img[r * bh] = (0.55, 0.52, 0.47)
-img *= (0.95 + 0.08 * noise(W, W, 30))[..., None]
+img *= (0.985 + 0.03 * noise(W, W, 30))[..., None]
+# One darker band of tile, at about chest height; the texture repeats above the ceiling.
+band = img[5 * bh:6 * bh].copy()
+band[np.mean(band, axis=2) > 0.6] *= np.array((0.8, 0.62, 0.5))
+img[5 * bh:6 * bh] = band
 save("T_BathTile", img, levels=24)
 
 # --- Bathroom floor: pale hexagons
@@ -240,8 +244,9 @@ save("T_DoorEntry", img, levels=20)
 
 # --- Light oak furniture
 x, y = grid(128, 128)
-grain = np.sin(y / 128 * 6.283 * 7 + 3 * noise(128, 128, 4)) * 0.5 + 0.5
-img = np.array((0.68, 0.56, 0.40)) * (0.86 + 0.2 * grain)[..., None]
+# Fine and quiet, or a large area of it turns into stripes.
+grain = np.sin(y / 128 * 6.283 * 19 + 3 * noise(128, 128, 4)) * 0.5 + 0.5
+img = np.array((0.68, 0.56, 0.40)) * (0.94 + 0.08 * grain)[..., None]
 img *= (0.97 + 0.05 * rng.random((128, 128)))[..., None]
 save("T_Oak", img, levels=20)
 
@@ -308,34 +313,98 @@ face_on(s3, 64, 36, 66, 1.0)
 s3[frame] = (0.01, 0.01, 0.01)
 save("T_TV_3", s3, levels=8)
 
-# --- Bathroom mirror: the room's tile, and someone standing behind you
+# --- Bathroom mirror: silvered glass, the room dim in it, and someone standing behind you
 MW, MH = 128, 128
 x, y = grid(MW, MH)
-base = np.ones((MH, MW, 3)) * np.array((0.56, 0.58, 0.56))
-base[((x // 28 + (y // 14) % 2) % 2 == 0) & (y % 14 == 0)] = (0.46, 0.46, 0.44)
-base[y % 14 == 0] = (0.46, 0.46, 0.44)
-base *= (0.92 + 0.14 * noise(MW, MH, 8))[..., None]
-rim = (x < 3) | (x > MW - 4) | (y < 3) | (y > MH - 4)
-base[rim] = (0.42, 0.10, 0.08)
+fall = (y / MH)[..., None]
+base = np.array((0.42, 0.48, 0.5)) + fall * np.array((0.2, 0.22, 0.23))
+door = (x > 62) & (x < 102) & (y < 96)                    # the doorway it faces
+paint(base, door, (0.24, 0.26, 0.27), 0.8)
+paint(base, ((x > 60) & (x < 104) & (y < 99)) & ~door, (0.58, 0.6, 0.58), 0.7)
+streak = np.abs(((x + y * 0.6) % 96) - 30) < 7             # the sheen on the glass
+paint(base, streak, (0.82, 0.86, 0.88), 0.16)
+paint(base, np.abs(((x + y * 0.6) % 96) - 46) < 2, (0.82, 0.86, 0.88), 0.12)
+base *= (0.95 + 0.08 * noise(MW, MH, 8))[..., None]
+edge = np.minimum(np.minimum(x, MW - 1 - x), np.minimum(y, MH - 1 - y))
+base *= np.clip(0.55 + edge / 14, 0, 1)[..., None]         # silver gone dark at the edge
 save("T_Mirror", base, levels=20)
 
 
 def figure_in(img, cx, height, width):
     body = (np.abs(x - cx) < width * (0.45 + 0.7 * (1 - y / MH))) & (y < height)
     head = np.hypot((x - cx) / (width * 0.8), (y - height) / (width * 1.05)) < 1
-    paint(img, body | head, (0.05, 0.05, 0.06), 1.0)
+    paint(img, body | head, (0.03, 0.03, 0.04), 1.0)
 
 
 m1 = base.copy()
-figure_in(m1, 88, 62, 9)
-m1[rim] = (0.42, 0.10, 0.08)
+figure_in(m1, 82, 62, 8)
 save("T_Mirror_1", m1, levels=20)
 m2 = base.copy()
-figure_in(m2, 70, 86, 18)
-m2[rim] = (0.42, 0.10, 0.08)
+figure_in(m2, 72, 90, 20)
 save("T_Mirror_2", m2, levels=20)
-m3 = base.copy() * 0.8
+m3 = base.copy() * 0.6
 face_on(m3, 64, 62, 120, 1.0)
-m3[rim] = (0.42, 0.10, 0.08)
 save("T_Mirror_3", m3, levels=20)
+# --- The woman's atlas. Left half: the nightgown, hem at the bottom. Top right: hair, ragged at the bottom, cut out by alpha.
+# Bottom right: her face, plain skin at the edges for the arms and legs.
+FS = 256
+fig_rng = np.random.default_rng(1978)
+x, y = grid(FS, FS)
+atlas = np.ones((FS, FS, 3)) * np.array((0.66, 0.67, 0.67))
+atlas_alpha = np.ones((FS, FS))
+cloth = x < 128
+folds = np.sin(x / 128 * 6.283 * 7 + 2.4 * noise(FS, FS, 5)) * 0.5 + 0.5
+atlas[cloth] *= (0.84 + 0.18 * folds[cloth] + 0.05 * fig_rng.random(cloth.sum()))[..., None]
+# dragged along floors: filthy from the hem up
+dirt = np.clip((90 - y) / 90, 0, 1) * (0.45 + 0.55 * noise(FS, FS, 14))
+atlas[cloth] = atlas[cloth] * (1 - dirt[cloth] * 0.55)[..., None] + (np.array((0.27, 0.22, 0.17)) * (dirt[cloth] * 0.55)[..., None])
+# old stains where the hands rest: soft and broken up, never a clean shape
+blotch = noise(FS, FS, 26)
+for sx, sy, rx, ry in ((12, 118, 12, 30), (116, 104, 11, 34), (46, 40, 22, 12)):
+    amount = np.clip(1.3 - np.hypot((x - sx) / rx, (y - sy) / ry), 0, 1) * np.clip((blotch - 0.35) * 3, 0, 1) * 0.5
+    atlas[cloth] = atlas[cloth] * (1 - amount[cloth])[..., None] + np.array((0.3, 0.17, 0.14)) * amount[cloth][..., None]
+
+hair = (x >= 128) & (y >= 128)
+strand = fig_rng.random(128)
+for _ in range(2):
+    strand = (strand + np.roll(strand, 1) + np.roll(strand, -1)) / 3
+strand = (strand - strand.min()) / (strand.max() - strand.min())
+wave = (x + 3 * np.sin(y / 17.0) + 2 * noise(FS, FS, 8)).astype(int) % 128
+atlas[hair] = np.array((0.025, 0.024, 0.03)) + (0.075 * strand[wave[hair]])[..., None]
+ends = 128 + (fig_rng.random(128) * 13).astype(int)
+atlas_alpha[hair & (y < ends[np.clip(x - 128, 0, 127).astype(int)])] = 0
+# wisps along both sides of the parting, so it is not a ruled line down her face
+wisp = noise(FS, FS, 40)[:, 0]
+atlas_alpha[hair & (x - 128 < 2 + 11 * np.abs(np.sin(y / 9.0)) * wisp[y.astype(int)])] = 0
+atlas_alpha[hair & (255 - x < 2 + 11 * np.abs(np.sin(y / 7.0 + 1.0)) * wisp[255 - y.astype(int)])] = 0
+
+face = (x >= 128) & (y < 128)
+fx, fy = x - 128.0, y.astype(float)
+atlas[face] = np.array((0.74, 0.76, 0.73))
+atlas[face] *= (0.95 + 0.08 * noise(FS, FS, 20)[face] + 0.02 * fig_rng.random(face.sum()))[..., None]
+
+
+def soft(cx, cy, rx, ry, amount, tone):
+    """Fades towards a tone, so features sink into the skin instead of sitting on it like stickers."""
+    k = amount * np.exp(-(((fx - cx) / rx) ** 2 + ((fy - cy) / ry) ** 2))
+    atlas[face] = atlas[face] * (1 - k[face])[..., None] + np.array(tone) * k[face][..., None]
+
+
+# hollow cheeks and temples
+for side in (-1, 1):
+    soft(64 + side * 34, 44, 12, 24, 0.45, (0.36, 0.37, 0.38))
+    soft(64 + side * 38, 92, 10, 18, 0.3, (0.4, 0.4, 0.42))
+# eyes sunk right in, almost nothing left but the dark and a wet point
+for side, shift in ((-1, 0), (1, 3)):
+    cx, cy = 64 + side * 21, 78 + shift
+    soft(cx, cy, 20, 14, 0.55, (0.2, 0.17, 0.2))
+    soft(cx, cy, 13, 8.5, 1.0, (0.02, 0.015, 0.02))
+    paint(atlas, face & (np.hypot((fx - (cx - side * 2)) / 2.2, (fy - cy) / 1.8) < 1), (0.62, 0.62, 0.56), 1.0)
+soft(64, 62, 5, 9, 0.3, (0.36, 0.36, 0.38))
+soft(64, 54, 8, 3, 0.45, (0.24, 0.22, 0.24))
+# the mouth a little open, dark, dried at the corner
+soft(64, 31, 16, 10, 0.5, (0.26, 0.2, 0.22))
+soft(64, 31, 9.5, 5.5, 1.0, (0.015, 0.01, 0.01))
+paint(atlas, face & (np.abs(fx - 71) < 1.6) & (fy > 8) & (fy < 28), (0.2, 0.08, 0.07), 0.7)
+save("T_Figure", atlas, atlas_alpha, levels=24)
 print("RESULT textures ok")
