@@ -407,4 +407,60 @@ soft(64, 31, 16, 10, 0.5, (0.26, 0.2, 0.22))
 soft(64, 31, 9.5, 5.5, 1.0, (0.015, 0.01, 0.01))
 paint(atlas, face & (np.abs(fx - 71) < 1.6) & (fy > 8) & (fy < 28), (0.2, 0.08, 0.07), 0.7)
 save("T_Figure", atlas, atlas_alpha, levels=24)
+
+# --- The computer's desktop: an old blue screen with a few icons, a taskbar and scan lines.
+DW, DH = 160, 90
+x, y = grid(DW, DH)
+desk = np.ones((DH, DW, 3)) * np.array((0.1, 0.3, 0.36))
+desk *= (0.85 + 0.25 * (y / DH))[..., None]
+paint(desk, y < 8, (0.62, 0.62, 0.6), 1.0)
+paint(desk, (y == 7), (0.86, 0.86, 0.84), 1.0)
+paint(desk, (y < 7) & (y > 1) & (x > 2) & (x < 22), (0.7, 0.7, 0.68), 1.0)
+paint(desk, (y < 7) & (y > 1) & (x > 140) & (x < 157), (0.5, 0.5, 0.48), 1.0)
+for top, color in ((82, (0.86, 0.74, 0.3)), (64, (0.78, 0.78, 0.76)), (46, (0.56, 0.62, 0.66))):
+    paint(desk, (y < top) & (y > top - 9) & (x > 8) & (x < 20), color, 1.0)
+    paint(desk, (y < top - 11) & (y > top - 13) & (x > 6) & (x < 22), (0.92, 0.92, 0.9), 1.0)
+desk[y % 2 == 0] *= 0.85
+save("T_Desktop", desk, levels=20)
+
+# --- Through the peephole: a stairwell bent by the lens, green paint below, whitewash above, the neighbours' door.
+PS = 128
+y, x = np.indices((PS, PS), dtype=float)
+u, v = (x - PS / 2) / (PS / 2), (y - PS / 2) / (PS / 2)
+r = np.hypot(u, v)
+sx, sy = u * (1 + 0.45 * r * r), v * (1 + 0.45 * r * r)
+hole = np.ones((PS, PS, 3)) * np.array((0.6, 0.6, 0.55))
+paint(hole, sy < -0.1, (0.22, 0.34, 0.28), 1.0)
+paint(hole, np.abs(sy + 0.1) < 0.03, (0.14, 0.2, 0.16), 1.0)
+floor = sy < -0.72
+paint(hole, floor, (0.36, 0.3, 0.26), 1.0)
+paint(hole, floor & (((np.floor(sx * 6) + np.floor(sy * 6)) % 2) == 0), (0.28, 0.24, 0.2), 1.0)
+door = (sx > -0.42) & (sx < 0.22) & (sy > -0.72) & (sy < 0.62)
+paint(hole, door, (0.3, 0.18, 0.12), 1.0)
+paint(hole, door & ((np.floor((sx + 0.42) * 14) + np.floor((sy + 0.72) * 14)) % 3 == 0), (0.24, 0.14, 0.1), 1.0)
+paint(hole, (np.abs(sx - 0.12) < 0.035) & (np.abs(sy + 0.05) < 0.02), (0.7, 0.62, 0.3), 1.0)
+paint(hole, (np.abs(sx + 0.1) < 0.06) & (np.abs(sy - 0.45) < 0.03), (0.75, 0.7, 0.5), 1.0)
+paint(hole, (sx > 0.55) & (((sx * 7 + sy * 3) % 1) < 0.18) & (sy < 0.1), (0.14, 0.12, 0.1), 1.0)
+paint(hole, (sx > 0.5) & (np.abs(sy - (0.1 - (sx - 0.5) * 0.5)) < 0.03), (0.3, 0.2, 0.14), 1.0)
+glow = np.exp(-((sx - 0.05) ** 2 + (sy - 0.95) ** 2) / 0.08)
+hole = hole * (0.8 + 0.5 * glow)[..., None] + np.array((0.9, 0.85, 0.6)) * (0.3 * glow)[..., None]
+hole *= (0.92 + 0.12 * noise(PS, PS, 16))[..., None]
+hole *= np.clip(1.15 - r * r * 0.9, 0, 1)[..., None]
+lens = np.clip((1.0 - r) * 30, 0, 1)
+save("T_Peephole", hole, lens, levels=20)
+# Someone right up against the door: long hair down over the shoulders, a grey face looking straight in.
+who = hole.copy()
+paint(who, (np.abs(sx) < 0.98) & (sy < -0.42), (0.1, 0.1, 0.11), 1.0)
+hair = (np.hypot((sx - 0.03) / 0.31, (sy - 0.2) / 0.4) < 1) | ((np.abs(sx - 0.03) < 0.4 - 0.08 * np.clip(-sy, 0, 1)) & (sy < 0.2) & (sy > -1.0))
+paint(who, hair, (0.025, 0.025, 0.03), 1.0)
+face = np.hypot((sx - 0.05) / 0.155, (sy - 0.12) / 0.235) < 1
+cover = sx < -0.05 + 0.025 * np.sin(sy * 15)
+paint(who, face & ~cover, (0.56, 0.58, 0.56), 1.0)
+paint(who, face & ~cover & (np.abs(sx - 0.05) > 0.12), (0.4, 0.42, 0.41), 1.0)
+for ex in (0.0, 0.12):
+    paint(who, face & ~cover & (np.hypot((sx - ex) / 0.045, (sy - 0.17) / 0.03) < 1), (0.04, 0.03, 0.04), 1.0)
+    paint(who, face & ~cover & (np.hypot((sx - ex - 0.008) / 0.012, (sy - 0.172) / 0.01) < 1), (0.7, 0.7, 0.64), 1.0)
+paint(who, face & ~cover & (np.hypot((sx - 0.06) / 0.04, (sy + 0.03) / 0.055) < 1), (0.05, 0.02, 0.02), 1.0)
+who *= np.clip(1.15 - r * r * 0.9, 0, 1)[..., None]
+save("T_Peephole_Someone", who, lens, levels=20)
 print("RESULT textures ok")

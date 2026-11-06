@@ -137,6 +137,11 @@ ModelImporter:
   - first:
       type: UnityEngine:Material
       assembly: UnityEngine.CoreModule
+      name: M_Screen
+    second: {fileID: 2100000, guid: c40ac76e4be8fb94b80d4efe20ce451b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
       name: M_TV
     second: {fileID: 2100000, guid: 2795be9f25f6e0c4a8afc88419498c46, type: 2}
   - first:
