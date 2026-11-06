@@ -39,6 +39,14 @@ public class NightLoop : MonoBehaviour
     [SerializeField] NoteCollection notes;
     [SerializeField] SafeLock safeLock;
     [SerializeField] DoorSwing[] insideDoors = new DoorSwing[0];
+    [SerializeField] ComputerDesk desk;
+    [SerializeField] DoorPeephole peephole;
+
+    [Header("Fading day")]
+    [Tooltip("After the first night, the day lasts this long, then the night starts by itself.")]
+    [SerializeField] float dayLength = 150f;
+    [Tooltip("How much daylight is left at the very end of a day.")]
+    [SerializeField, Range(0f, 1f)] float dayEndsAt = 0.25f;
     [SerializeField] ControlHints hints;
     [SerializeField] GameObject titleScreen;
 
@@ -47,6 +55,8 @@ public class NightLoop : MonoBehaviour
     [SerializeField] int reportReward = 10000;
     [SerializeField] int reportRewardPerNight = 2000;
     [SerializeField] int falseReportFine = 5000;
+    [Tooltip("What the client pays extra for a photo with her on it. She comes a step closer for it.")]
+    [SerializeField] int ghostReward = 8000;
     [SerializeField] int secondAnomalyFromNight = 3;
     [SerializeField] float secondAnomalyChance = 0.5f;
 
@@ -107,6 +117,23 @@ public class NightLoop : MonoBehaviour
     public Rect PhotoFrame => photoFrame;
     /// <summary>False while the title screen is up.</summary>
     public bool Started { get; private set; }
+    /// <summary>Sitting at the computer.</summary>
+    public bool AtDesk => desk != null && desk.Seated;
+    /// <summary>Looking through the peephole.</summary>
+    public bool Peeping => peephole != null && peephole.Looking;
+    /// <summary>Photos taken but not sent yet.</summary>
+    public bool HasUnsentPhotos
+    {
+        get
+        {
+            foreach (PhotoPrint.Shot shot in photoPrint.Archive)
+            {
+                if (!shot.Sent)
+                    return true;
+            }
+            return false;
+        }
+    }
     /// <summary>What E would do right now, or null.</summary>
     public string UsePrompt { get; private set; }
     /// <summary>0 on the first day, 1 once the door has stopped leading anywhere.</summary>
@@ -129,6 +156,9 @@ public class NightLoop : MonoBehaviour
     float brightness = 1f;
     float nextPhotoTime;
     bool sleepRequested;
+    bool dayTimed;
+    float dayLeft;
+    float dayLight = 1f;
     bool doorRequested;
     bool trapped;
     Color goalColor;
@@ -186,10 +216,10 @@ public class NightLoop : MonoBehaviour
         hand.color = new Color(brightness, brightness, brightness, 1f);
         look.Jitter = JitterNearAnomalies();
 
-        bool aiming = Started && CurrentPhase != Phase.Transition && !notes.Reading && !safeLock.Busy && aim.IsPressed();
+        bool aiming = Started && CurrentPhase != Phase.Transition && !notes.Reading && !safeLock.Busy && !AtDesk && !Peeping && aim.IsPressed();
         viewfinder.SetActive(aiming);
-        hand.enabled = Started && !aiming;
-        view.fieldOfView = aiming ? aimFieldOfView : normalFieldOfView;
+        hand.enabled = Started && !aiming && !AtDesk && !Peeping;
+        view.fieldOfView = AtDesk ? desk.FieldOfView : aiming ? aimFieldOfView : normalFieldOfView;
         filmText.text = Film.ToString();
         filmText.color = Film > 0 ? Color.white : fineColor;
         foreach (Anomaly anomaly in anomalies)
@@ -217,7 +247,9 @@ public class NightLoop : MonoBehaviour
             return;
         }
 
-        if (safeLock.Busy)
+        FadeTheDay();
+
+        if (safeLock.Busy || AtDesk || Peeping)
         {
             dot.color = dotIdle;
             return;
@@ -235,7 +267,8 @@ public class NightLoop : MonoBehaviour
         dot.color = usable != null ? dotActive : dotIdle;
         UsePrompt = usable != null ? PromptFor(usable) : null;
 
-        if (usable != null && interact.WasPressedThisFrame())
+        // The E that stood you up from the desk must not sit you straight back down.
+        if (usable != null && interact.WasPressedThisFrame() && !(desk != null && desk.JustStood) && !(peephole != null && peephole.JustClosed))
             Use(usable);
         else if (aiming && shutter.WasPressedThisFrame() && Time.time >= nextPhotoTime)
         {
@@ -264,7 +297,7 @@ public class NightLoop : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, reach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             return null;
         bool day = CurrentPhase == Phase.Day;
-        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
+        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
         return usable ? hit.collider : null;
     }
 
@@ -273,6 +306,10 @@ public class NightLoop : MonoBehaviour
         DoorSwing swing = target.GetComponent<DoorSwing>();
         if (swing != null)
             return swing.IsOpen ? "закрыть дверь" : "открыть дверь";
+        if (target.GetComponent<ComputerDesk>() != null)
+            return "сесть за компьютер";
+        if (target.GetComponent<DoorPeephole>() != null)
+            return "посмотреть в глазок";
         if (notes.IsNote(target))
             return "прочитать";
         if (safeLock.IsLocked(target))
@@ -289,6 +326,18 @@ public class NightLoop : MonoBehaviour
         if (swing != null)
         {
             swing.Toggle();
+            return;
+        }
+        ComputerDesk computer = target.GetComponent<ComputerDesk>();
+        if (computer != null)
+        {
+            computer.Sit();
+            return;
+        }
+        DoorPeephole hole = target.GetComponent<DoorPeephole>();
+        if (hole != null)
+        {
+            hole.Look();
             return;
         }
         if (notes.IsNote(target))
@@ -316,14 +365,10 @@ public class NightLoop : MonoBehaviour
                 photographed.Add(anomaly);
         }
 
-        if (photographed.Count > 0)
-            Money += (reportReward + reportRewardPerNight * (Night - 1)) * photographed.Count;
-        else
-            Money = Mathf.Max(0, Money - falseReportFine);
-        photoPrint.Capture();
+        // Nothing is paid yet: the client pays for the photos you send from the computer.
+        photoPrint.Capture(photographed.Count);
         hints.PhotoTaken();
         StartCoroutine(Flash(photographed));
-        ShowMoneyBriefly(photographed.Count > 0 ? Color.white : fineColor);
         sound.PlayShutter();
         if (photographed.Count > 0)
             sound.PlayVanish();
@@ -600,6 +645,10 @@ public class NightLoop : MonoBehaviour
         foreach (Anomaly anomaly in anomalies)
             anomaly.Clear();
         photoPrint.Clear();
+        if (peephole != null)
+            peephole.Clear();
+        if (desk != null)
+            desk.Clear();
         notes.Clear();
         safeLock.Clear();
         foreach (DoorSwing swing in insideDoors)
@@ -617,6 +666,11 @@ public class NightLoop : MonoBehaviour
         SetLamp(Mathf.Lerp(dayIntensity, nightLampIntensity, late), Mathf.Lerp(1f, nightBrightness, late));
         SetDaylight(1f - late);
         notes.ShowForToday();
+        // The first day is for finding your way around; after that the day runs out.
+        dayLight = 1f - late;
+        dayLeft = dayLength;
+        dayTimed = Night > 1;
+        photoPrint.HauntOldPhotos(Night);
         player.Teleport(wakePoint.position, wakePoint.eulerAngles.y, wakePitch);
     }
 
@@ -634,10 +688,42 @@ public class NightLoop : MonoBehaviour
         windowBeam.enabled = amount > 0f;
     }
 
+    void FadeTheDay()
+    {
+        if (!dayTimed || CurrentPhase != Phase.Day)
+            return;
+        dayLeft -= Time.deltaTime;
+        float left = Mathf.Clamp01(dayLeft / dayLength);
+        nightBar.localScale = new Vector3(1f - left, 1f, 1f);
+        SetDaylight(dayLight * Mathf.Lerp(dayEndsAt, 1f, left));
+        if (dayLeft <= 0f && !safeLock.Busy && !notes.Reading)
+        {
+            dayTimed = false;
+            StartCoroutine(RunNight());
+        }
+    }
+
     void SetLamp(float intensity, float newBrightness)
     {
         lamp.intensity = intensity;
         brightness = newBrightness;
+    }
+
+    /// <summary>The client's answer to a sent photo: paid for what is on it, fined for an empty frame.</summary>
+    public void Settle(PhotoPrint.Shot shot)
+    {
+        int change = shot.Found > 0 ? (reportReward + reportRewardPerNight * (shot.Night - 1)) * shot.Found : -falseReportFine;
+        if (shot.Ghost)
+        {
+            change += ghostReward;
+            photoPrint.GhostComesCloser();
+        }
+        Money = Mathf.Max(0, Money + change);
+        ShowMoneyBriefly(change >= 0 ? Color.white : fineColor);
+        if (change >= 0)
+            sound.PlayVanish();
+        else
+            sound.PlayWrong();
     }
 
     void ShowMoneyBriefly(Color color)
@@ -706,6 +792,10 @@ public class NightLoop : MonoBehaviour
 
     IEnumerator FadeOut()
     {
+        if (AtDesk)
+            desk.Stand();
+        if (Peeping)
+            peephole.Close();
         CurrentPhase = Phase.Transition;
         player.Frozen = true;
         photoPrint.PutAway();

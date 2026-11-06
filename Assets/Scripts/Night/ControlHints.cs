@@ -6,7 +6,7 @@ using UnityEngine.UI;
 /// <summary>Teaches the controls once: a short chain through the first day and night, plus "E ..." the first time you can use each thing.</summary>
 public class ControlHints : MonoBehaviour
 {
-    enum Step { Walk, Sleep, Aim, Shoot, ViewPhoto, Done }
+    enum Step { Walk, Sleep, Aim, Shoot, ViewPhoto, Send, Done }
 
     [SerializeField] NightLoop loop;
     [SerializeField] NoteCollection notes;
@@ -47,7 +47,7 @@ public class ControlHints : MonoBehaviour
 
     string Pick()
     {
-        if (!loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy)
+        if (!loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy || loop.AtDesk || loop.Peeping)
             return "";
         if (notes.Reading)
             return "E закрыть";
@@ -66,8 +66,9 @@ public class ControlHints : MonoBehaviour
             case Step.Shoot:
                 if (!night)
                     return "";
-                return aim.IsPressed() ? "ЛКМ снять. Пустой кадр штраф" : "ПКМ поднять камеру";
+                return aim.IsPressed() ? "ЛКМ снять" : "ПКМ поднять камеру";
             case Step.ViewPhoto: return "Зажми Q, чтобы рассмотреть снимок";
+            case Step.Send: return night ? "" : "Отправь снимки с компьютера на кухне. Пустой кадр штраф";
             default: return "";
         }
     }
@@ -90,6 +91,10 @@ public class ControlHints : MonoBehaviour
                 break;
             case Step.ViewPhoto:
                 if (viewPhoto.IsPressed() || Time.time > viewPhotoHintUntil)
+                    step = Step.Send;
+                break;
+            case Step.Send:
+                if (!loop.HasUnsentPhotos)
                     step = Step.Done;
                 break;
         }

@@ -152,4 +152,6 @@ public class NightAudio : MonoBehaviour
     public void PlayDoorOpen() => camera2D.PlayOneShot(doorOpen);
     public void PlayDoorClose() => camera2D.PlayOneShot(doorClose);
     public void PlayCreakAt(Vector3 position) => PlayInWorld(creak, position);
+    public void PlayKnock() => PlayInWorld(knock, door.position);
+    public void PlayShutterAt(Vector3 position) => PlayInWorld(shutter, position);
 }
