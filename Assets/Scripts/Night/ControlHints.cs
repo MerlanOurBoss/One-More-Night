@@ -47,7 +47,7 @@ public class ControlHints : MonoBehaviour
 
     string Pick()
     {
-        if (!loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy || loop.AtDesk || loop.Peeping)
+        if (!loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy || loop.AtDesk || loop.Peeping || loop.OnPhone)
             return "";
         if (notes.Reading)
             return "E закрыть";

@@ -16,6 +16,10 @@ public class PhotoPrint : MonoBehaviour
         public int Found;
         public bool Ghost;
         public bool Sent;
+        /// <summary>The room of what it caught, or of the camera for an empty one.</summary>
+        public string Room;
+        /// <summary>Taken on the night the client wanted this room.</summary>
+        public bool ForTask;
         /// <summary>Taken by day: the one to compare a night photo with.</summary>
         public bool Day;
         /// <summary>Not taken by the player at all.</summary>
@@ -108,7 +112,7 @@ public class PhotoPrint : MonoBehaviour
     }
 
     /// <summary>Call before the flash clears anything: the print keeps what was there.</summary>
-    public void Capture(int found)
+    public void Capture(int found, string room)
     {
         float distance = Mathf.Max(ghostNearest, ghostFirstDistance - ghostCloserEachTime * ghostsCaught);
         bool caught = Random.value < Mathf.Min(ghostChanceMax, ghostChancePerNight * (loop.Night - 1)) && PlaceGhost(distance);
@@ -120,7 +124,7 @@ public class PhotoPrint : MonoBehaviour
         Graphics.Blit(photo, copy);
         Keep(new Shot
         {
-            Image = copy, Night = loop.Night, Found = found, Ghost = caught, Day = loop.CurrentPhase == NightLoop.Phase.Day,
+            Image = copy, Night = loop.Night, Found = found, Room = room, ForTask = loop.IsTaskRoom(room), Ghost = caught, Day = loop.CurrentPhase == NightLoop.Phase.Day,
             Eye = view.transform.position, Look = view.transform.rotation, FieldOfView = view.fieldOfView,
         });
 

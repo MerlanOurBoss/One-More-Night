@@ -41,6 +41,14 @@ public class NightLoop : MonoBehaviour
     [SerializeField] DoorSwing[] insideDoors = new DoorSwing[0];
     [SerializeField] ComputerDesk desk;
     [SerializeField] DoorPeephole peephole;
+    [SerializeField] PhonePost phone;
+
+    [Header("Ordering film from the computer")]
+    [SerializeField] int filmPrice = 3000;
+    [SerializeField] int filmPack = 2;
+
+    [Header("The client's task: one room a night pays more")]
+    [SerializeField] int taskMultiplier = 2;
 
     [Header("Fading day")]
     [Tooltip("After the first night, the day lasts this long, then the night starts by itself.")]
@@ -121,6 +129,53 @@ public class NightLoop : MonoBehaviour
     public bool AtDesk => desk != null && desk.Seated;
     /// <summary>Looking through the peephole.</summary>
     public bool Peeping => peephole != null && peephole.Looking;
+    /// <summary>On the phone.</summary>
+    public bool OnPhone => phone != null && phone.Talking;
+    /// <summary>Film ordered today, delivered for the night.</summary>
+    public int ExtraFilm { get; private set; }
+    public int FilmPrice => filmPrice;
+    public int FilmPack => filmPack;
+
+    // The four rooms on the plan, and how the client names each one.
+    static readonly string[] RoomIds = { "kitchen", "bedroom", "bath", "hall" };
+    static readonly string[] RoomNames = { "на кухне", "в зале", "в ванной", "в коридоре" };
+    string taskRoom;
+    int taskNight = -1;
+
+    /// <summary>Where the client wants photos tonight, as the client says it: "в зале".</summary>
+    public string TaskRoomName => taskRoom == null ? "" : RoomNames[System.Array.IndexOf(RoomIds, taskRoom)];
+    public string TaskText => taskNight == Night && taskRoom != null ? "ночью нужны снимки " + TaskRoomName + ", оплата вдвое" : "новых заданий нет";
+
+    /// <summary>Whether a photo of this room, taken tonight, is the one the client asked for.</summary>
+    public bool IsTaskRoom(string room) => CurrentPhase == Phase.Night && taskNight == Night && room == taskRoom;
+
+    /// <summary>A new job each morning, for the night ahead.</summary>
+    void NewTask()
+    {
+        taskNight = Night;
+        taskRoom = RoomIds[Random.Range(0, RoomIds.Length)];
+    }
+
+    public static string RoomAt(Vector3 p)
+    {
+        if (p.x > 0.063f)
+            return "bedroom";
+        if (p.z > -0.158f)
+            return "kitchen";
+        if (p.x < -1.495f)
+            return "bath";
+        return "hall";
+    }
+
+    public bool OrderFilm()
+    {
+        if (Money < filmPrice)
+            return false;
+        Money -= filmPrice;
+        ExtraFilm += filmPack;
+        ShowMoneyBriefly(Color.white);
+        return true;
+    }
     /// <summary>Photos taken but not sent yet.</summary>
     public bool HasUnsentPhotos
     {
@@ -187,6 +242,7 @@ public class NightLoop : MonoBehaviour
         baseJitter = look.Jitter;
         Film = filmPerNight;
         goalColor = goalText.color;
+        NewTask();
 
         fade.color = Color.clear;
         nightBar.localScale = new Vector3(0f, 1f, 1f);
@@ -216,9 +272,9 @@ public class NightLoop : MonoBehaviour
         hand.color = new Color(brightness, brightness, brightness, 1f);
         look.Jitter = JitterNearAnomalies();
 
-        bool aiming = Started && CurrentPhase != Phase.Transition && !notes.Reading && !safeLock.Busy && !AtDesk && !Peeping && aim.IsPressed();
+        bool aiming = Started && CurrentPhase != Phase.Transition && !notes.Reading && !safeLock.Busy && !AtDesk && !Peeping && !OnPhone && aim.IsPressed();
         viewfinder.SetActive(aiming);
-        hand.enabled = Started && !aiming && !AtDesk && !Peeping;
+        hand.enabled = Started && !aiming && !AtDesk && !Peeping && !OnPhone;
         view.fieldOfView = AtDesk ? desk.FieldOfView : aiming ? aimFieldOfView : normalFieldOfView;
         filmText.text = Film.ToString();
         filmText.color = Film > 0 ? Color.white : fineColor;
@@ -249,7 +305,7 @@ public class NightLoop : MonoBehaviour
 
         FadeTheDay();
 
-        if (safeLock.Busy || AtDesk || Peeping)
+        if (safeLock.Busy || AtDesk || Peeping || OnPhone)
         {
             dot.color = dotIdle;
             return;
@@ -297,7 +353,7 @@ public class NightLoop : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, reach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             return null;
         bool day = CurrentPhase == Phase.Day;
-        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
+        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || (phone != null && hit.collider == phone.GetComponent<Collider>() && phone.Ringing) || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
         return usable ? hit.collider : null;
     }
 
@@ -310,6 +366,8 @@ public class NightLoop : MonoBehaviour
             return "сесть за компьютер";
         if (target.GetComponent<DoorPeephole>() != null)
             return "посмотреть в глазок";
+        if (phone != null && target == phone.GetComponent<Collider>())
+            return "взять трубку";
         if (notes.IsNote(target))
             return "прочитать";
         if (safeLock.IsLocked(target))
@@ -340,6 +398,11 @@ public class NightLoop : MonoBehaviour
             hole.Look();
             return;
         }
+        if (phone != null && target == phone.GetComponent<Collider>())
+        {
+            phone.Answer();
+            return;
+        }
         if (notes.IsNote(target))
             notes.Open();
         else if (safeLock.IsLocked(target))
@@ -366,7 +429,7 @@ public class NightLoop : MonoBehaviour
         }
 
         // Nothing is paid yet: the client pays for the photos you send from the computer.
-        photoPrint.Capture(photographed.Count);
+        photoPrint.Capture(photographed.Count, RoomAt(photographed.Count > 0 ? photographed[0].Center : view.transform.position));
         hints.PhotoTaken();
         StartCoroutine(Flash(photographed));
         sound.PlayShutter();
@@ -445,7 +508,8 @@ public class NightLoop : MonoBehaviour
             yield break;
         }
         SpawnAnomalies();
-        Film = filmPerNight;
+        Film = filmPerNight + ExtraFilm;
+        ExtraFilm = 0;
 
         player.Teleport(wakePoint.position, wakePoint.eulerAngles.y, wakePitch);
         look.FogNear = nightFogNear;
@@ -649,6 +713,9 @@ public class NightLoop : MonoBehaviour
             peephole.Clear();
         if (desk != null)
             desk.Clear();
+        if (phone != null)
+            phone.Clear();
+        ExtraFilm = 0;
         notes.Clear();
         safeLock.Clear();
         foreach (DoorSwing swing in insideDoors)
@@ -671,6 +738,7 @@ public class NightLoop : MonoBehaviour
         dayLeft = dayLength;
         dayTimed = Night > 1;
         photoPrint.HauntOldPhotos(Night);
+        NewTask();
         player.Teleport(wakePoint.position, wakePoint.eulerAngles.y, wakePitch);
     }
 
@@ -712,7 +780,11 @@ public class NightLoop : MonoBehaviour
     /// <summary>The client's answer to a sent photo: paid for what is on it, fined for an empty frame.</summary>
     public void Settle(PhotoPrint.Shot shot)
     {
-        int change = shot.Found > 0 ? (reportReward + reportRewardPerNight * (shot.Night - 1)) * shot.Found : -falseReportFine;
+        int pay = (reportReward + reportRewardPerNight * (shot.Night - 1)) * shot.Found;
+        // Decided when it was taken, since by the time it is sent the client wants another room.
+        if (shot.ForTask)
+            pay *= taskMultiplier;
+        int change = shot.Found > 0 ? pay : -falseReportFine;
         if (shot.Ghost)
         {
             change += ghostReward;

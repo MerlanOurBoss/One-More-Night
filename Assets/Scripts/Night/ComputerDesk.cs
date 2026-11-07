@@ -78,6 +78,7 @@ public class ComputerDesk : MonoBehaviour
     int stoodOnFrame = -1;
 
     bool hers;
+    bool mail;
     int index;
     bool moveHeld;
     bool verticalHeld;
@@ -89,7 +90,7 @@ public class ComputerDesk : MonoBehaviour
     readonly int[] typed = new int[NoteCollection.CodeLength];
     int typedCount;
     bool unlocked;
-    RenderTexture[] herImages;
+    [System.NonSerialized] RenderTexture[] herImages;
     RenderTexture lastImage;
     int nightChecked = -1;
     bool turnOnPending;
@@ -158,7 +159,16 @@ public class ComputerDesk : MonoBehaviour
         Keyboard keys = Keyboard.current;
         if (keys != null && keys.fKey.wasPressedThisFrame)
         {
-            hers = !hers;
+            // My photos, then the mail, then her folder.
+            if (mail)
+            {
+                mail = false;
+                hers = true;
+            }
+            else if (hers)
+                hers = false;
+            else
+                mail = true;
             index = hers ? 0 : Mathf.Max(0, photos.Archive.Count - 1);
             ResetView();
             sound.PlayShutterEmpty();
@@ -180,6 +190,12 @@ public class ComputerDesk : MonoBehaviour
 
         if (Mathf.Abs(input.y) < 0.3f)
             verticalHeld = false;
+        else if (!verticalHeld && mail)
+        {
+            verticalHeld = true;
+            if (input.y > 0f)
+                Order();
+        }
         else if (!verticalHeld && !hers && Count > 0)
         {
             verticalHeld = true;
@@ -213,7 +229,7 @@ public class ComputerDesk : MonoBehaviour
         }
     }
 
-    int Count => hers ? HerCount : photos.Archive.Count;
+    int Count => mail ? 0 : hers ? HerCount : photos.Archive.Count;
 
     public void Sit()
     {
@@ -230,6 +246,7 @@ public class ComputerDesk : MonoBehaviour
         player.Teleport(seat, seatYaw, seatPitch);
         SetEye(eyeHeight);
         hers = false;
+        mail = false;
         index = Mathf.Max(0, photos.Archive.Count - 1);
         ResetView();
         caption.gameObject.SetActive(true);
@@ -270,6 +287,24 @@ public class ComputerDesk : MonoBehaviour
         shot.Sent = true;
         loop.Settle(shot);
         Show();
+    }
+
+    void Order()
+    {
+        if (loop.CurrentPhase != NightLoop.Phase.Day)
+        {
+            sound.PlayShutterEmpty();
+            Show("ночью связи нет");
+            return;
+        }
+        if (!loop.OrderFilm())
+        {
+            sound.PlayWrong();
+            Show("не хватает денег");
+            return;
+        }
+        sound.PlayShutterEmpty();
+        Show("заказ принят, привезут к ночи");
     }
 
     void ToggleCompare(PhotoPrint.Shot shot)
@@ -393,6 +428,14 @@ public class ComputerDesk : MonoBehaviour
 
     void Show(string note = null)
     {
+        if (mail)
+        {
+            ShowDesktop();
+            caption.text = "почта: " + (note ?? loop.TaskText) +
+                           "\nW купить " + loop.FilmPack + " кадра за $" + loop.FilmPrice + (loop.ExtraFilm > 0 ? ", заказано " + loop.ExtraFilm : "") +
+                           "\nF её папка   E встать";
+            return;
+        }
         if (hers)
         {
             ShowHers(note);
@@ -403,7 +446,7 @@ public class ComputerDesk : MonoBehaviour
         if (archive.Count == 0)
         {
             ShowDesktop();
-            caption.text = "снимков пока нет\nF её папка   E встать";
+            caption.text = "снимков пока нет\nF почта   E встать";
             return;
         }
 
@@ -415,12 +458,12 @@ public class ComputerDesk : MonoBehaviour
         string zoom = zoomSteps[zoomStep] > 1f ? ", ближе в " + zoomSteps[zoomStep] + " раза" : "";
         caption.text = "снимок " + (index + 1) + " из " + archive.Count + ", ночь " + shot.Night + ", " + state + zoom +
                        (shot.Sent ? "\nA/D листать   S сравнить" : "\nA/D листать   W отправить   S сравнить") +
-                       "\nЛКМ ближе   F её папка   E встать";
+                       "\nЛКМ ближе   F почта   E встать";
     }
 
     void ShowHers(string note)
     {
-        if (herImages == null)
+        if (herImages == null || herImages.Length != herEyes.Length)
         {
             herImages = new RenderTexture[herEyes.Length];
             for (int i = 0; i < herEyes.Length; i++)
