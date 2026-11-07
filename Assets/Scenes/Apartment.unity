@@ -946,6 +946,7 @@ MonoBehaviour:
   vanish: {fileID: 8300000, guid: 3d24c731dbd524e4eb5f2ca10072d28e, type: 3}
   wrong: {fileID: 8300000, guid: c15cc6740d161b84ca222e5443be103f, type: 3}
   stinger: {fileID: 8300000, guid: 9744594ab61650b41b918e6471f1573f, type: 3}
+  stingerLong: {fileID: 8300000, guid: aaf575bbe9342814f8e689e0eb66033a, type: 3}
   knock: {fileID: 8300000, guid: d6d04ae9db1c1df4bad0baa39bd64813, type: 3}
   creak: {fileID: 8300000, guid: 3363cecc5ea2b7240b3e68fc25cc5eec, type: 3}
   overhead: {fileID: 8300000, guid: 6f0309b6bdab3aa45a7bbc62d283e1c2, type: 3}
@@ -1175,7 +1176,7 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
-  m_Resource: {fileID: 8300000, guid: 57e817e7710226c42b77f453d255e27a, type: 3}
+  m_Resource: {fileID: 8300000, guid: b6060cbfb772ad8458720a6752b3edc1, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 0
   m_Pitch: 1
@@ -9074,7 +9075,7 @@ MonoBehaviour:
   bell: {fileID: 1788459903}
   earpiece: {fileID: 1092392378}
   voice: {fileID: 8300000, guid: b6523c7a9621fcd46a0c15749e49a354, type: 3}
-  breath: {fileID: 8300000, guid: 57e817e7710226c42b77f453d255e27a, type: 3}
+  breath: {fileID: 8300000, guid: fde9f8000bf42bd44a0a9f720e9722a6, type: 3}
   hiss: {fileID: 8300000, guid: 7fa4df00ff77ef6498114ec4b31da597, type: 3}
   caption: {fileID: 876151086}
   morningRingAfter: {x: 6, y: 15}

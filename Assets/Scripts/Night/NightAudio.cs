@@ -23,6 +23,7 @@ public class NightAudio : MonoBehaviour
     [SerializeField] AudioClip vanish;
     [SerializeField] AudioClip wrong;
     [SerializeField] AudioClip stinger;
+    [SerializeField] AudioClip stingerLong;
     [SerializeField] AudioClip knock;
     [SerializeField] AudioClip creak;
     [SerializeField] AudioClip overhead;
@@ -145,6 +146,7 @@ public class NightAudio : MonoBehaviour
     public void PlayVanish() => camera2D.PlayOneShot(vanish);
     public void PlayWrong() => camera2D.PlayOneShot(wrong);
     public void PlayStinger() => camera2D.PlayOneShot(stinger);
+    public void PlayStingerLong() => camera2D.PlayOneShot(stingerLong);
     public void PlayDoor() => PlayInWorld(creak, door.position);
     public void PlayOutside() => camera2D.PlayOneShot(outside);
     public void StopCamera() => camera2D.Stop();

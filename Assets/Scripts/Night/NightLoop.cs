@@ -632,7 +632,7 @@ public class NightLoop : MonoBehaviour
             yield return new WaitForSeconds(1f);
             lostFace.SetActive(true);
             sound.StopCamera();
-            sound.PlayStinger();
+            sound.PlayStingerLong();
             yield return new WaitForSeconds(0.45f);
             lostFace.SetActive(false);
             fade.color = Color.black;
