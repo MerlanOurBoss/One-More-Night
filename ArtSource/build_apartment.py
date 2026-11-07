@@ -782,12 +782,13 @@ for y in (1.9, 1.83, 1.77):
     props.box((-2.667, y, 3.22), (-2.654, y + 0.035, 3.28), (0.82, 0.82, 0.8))
 
 # Runs of cabinets on a recessed plinth.
-props.box((-3.268, 0.0, 1.0), (-2.77, 0.1, 2.568), PLINTH, skip=("y+", "y-"))
-props.box((-3.268, 0.1, 1.0), (-2.72, 0.86, 2.568), GREY, skip=("y+",))
-props.box((-3.268, 0.86, 0.99), (-2.68, 0.9, 2.568), TOP)
+# The run right of the washing machine starts clear of it (the washer ends at z 1.02).
+props.box((-3.268, 0.0, 1.04), (-2.77, 0.1, 2.568), PLINTH, skip=("y+", "y-"))
+props.box((-3.268, 0.1, 1.04), (-2.72, 0.86, 2.568), GREY, skip=("y+",))
+props.box((-3.268, 0.86, 1.03), (-2.68, 0.9, 2.568), TOP)
 props.box((-3.268, 0.0, -0.147), (-1.37, 0.1, 0.345), PLINTH, skip=("y+", "y-"))
 props.box((-3.268, 0.1, -0.147), (-1.32, 0.86, 0.395), GREY, skip=("y+",))
-for z0, z1 in ((1.01, 1.49), (2.31, 2.56)):
+for z0, z1 in ((1.05, 1.49), (2.31, 2.56)):
     zc = (z0 + z1) / 2
     props.box((-2.72, 0.12, z0), (-2.705, 0.84, z1), FRONT)
     props.box((-2.705, 0.68, zc - 0.07), (-2.683, 0.7, zc + 0.07), HANDLE)
@@ -865,10 +866,10 @@ props.lathe(-2.96, 2.08, [
 props.box((-2.85, 0.95, 2.065), (-2.62, 0.97, 2.095), (0.12, 0.12, 0.12))
 # Detergent on the washing machine.
 props.lathe(-3.0, 0.7, [
-    (0.055, 0.055, 0.84, 0.0, (0.2, 0.34, 0.62)),
-    (0.055, 0.055, 1.02, 0.0, (0.24, 0.4, 0.7)),
-    (0.022, 0.022, 1.05, 0.0, (0.8, 0.8, 0.8)),
-    (0, 0, 1.07, 0.0, (0.8, 0.8, 0.8)),
+    (0.055, 0.055, 0.85, 0.0, (0.2, 0.34, 0.62)),
+    (0.055, 0.055, 1.03, 0.0, (0.24, 0.4, 0.7)),
+    (0.022, 0.022, 1.06, 0.0, (0.8, 0.8, 0.8)),
+    (0, 0, 1.08, 0.0, (0.8, 0.8, 0.8)),
 ], n=8)
 
 # Tiled splashback along both walls, tile by tile.
@@ -1088,9 +1089,8 @@ props.box((-1.358, 1.05, -1.1), (-1.34, 1.16, -1.02), (0.85, 0.85, 0.85))
 props.box((-1.358, 1.25, -3.4), (-1.335, 1.75, -2.95), (0.35, 0.28, 0.2))
 props.box((-1.345, 1.3, -3.36), (-1.32, 1.7, -2.99), (0.45, 0.42, 0.34))
 
-washer = Part("Washer", material("M_Washer"))
-washer.rect((-2.65, 0.0, 0.42), (-2.65, 0.84, 0.98), (1, 0, 0), uv="fill")
-Part.parts["Props_Kitchen"].box((-3.268, 0.0, 0.42), (-2.65, 0.84, 0.98), (0.82, 0.82, 0.8), skip=("x+",))
+# The washing machine in x -3.25..-2.65, z 0.42..1.02, 0.85 high is its own model now:
+# Assets/Art/Models/Washer.fbx, from ArtSource/export_washer.py (sand3d), placed in the scene.
 hob = Part("Hob", material("M_Hob"))
 hob.rect((-3.2, 0.918, 1.5), (-2.72, 0.918, 2.3), (0, 1, 0), uv="fill")
 Part.parts["Props_Kitchen"].box((-3.2, 0.9, 1.5), (-2.72, 0.918, 2.3), (0.1, 0.1, 0.1), skip=("y+", "y-"))
