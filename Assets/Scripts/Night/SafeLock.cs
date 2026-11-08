@@ -14,6 +14,8 @@ public class SafeLock : MonoBehaviour
     [SerializeField] Collider safe;
     [Tooltip("The dark inside and the swung-out door.")]
     [SerializeField] GameObject openParts;
+    [Tooltip("The shut door, hidden once it swings out.")]
+    [SerializeField] GameObject closedParts;
 
     [Header("Lock screen")]
     [SerializeField] GameObject lockScreen;
@@ -74,6 +76,7 @@ public class SafeLock : MonoBehaviour
     {
         opened = false;
         openParts.SetActive(false);
+        closedParts.SetActive(true);
     }
 
     public void Open()
@@ -139,6 +142,7 @@ public class SafeLock : MonoBehaviour
         opened = true;
         lockScreen.SetActive(false);
         openParts.SetActive(true);
+        closedParts.SetActive(false);
         sound.PlayCreakAt(safe.bounds.center);
 
         filmPrint.enabled = false;

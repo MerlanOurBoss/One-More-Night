@@ -1,15 +1,18 @@
 """Exports the kitchen washing machine, written in sand3d (its programs/washing_machine.py), for Unity.
 
-Run with the sand3d env: C:/Users/merla/Tools/sand3d-env/Scripts/python.exe ArtSource/export_washer.py [--render]
-Writes ArtSource/Washer.glb (sand3d's own export, metres) and Assets/Art/Models/Washer.fbx,
-re-imported from the GLB so each part stays its own object: door, drum, drawer, dial.
-Like the apartment's props, colour is in the vertices (layer "Col") and every part uses M_Prop.
+Run with the sand3d env: C:/Users/merla/Tools/sand3d-env/Scripts/python.exe ArtSource/export_washer.py
+Writes ArtSource/Washer.glb (sand3d's own export, metres) and Assets/Art/Models/Washer.fbx: Body, Door with its origin on
+the hinge (an anomaly needs one renderer and one collider on what it turns) and Drum with its origin on its axle, its local
+X, with paddles added or its spin would not show. At rotation 0 in Unity the front looks +X, origin on the floor.
+Like the apartment's props, colour is in the vertices and everything uses M_Prop.
 """
+import math
 import sys
 from pathlib import Path
 
 import bpy
 import bmesh  # only importable once bpy is
+from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(Path.home() / "Tools" / "sand3d" / "programs"))
@@ -35,6 +38,12 @@ COLOR = {
     "drawer": (0.74, 0.74, 0.72),
     "dial": (0.74, 0.74, 0.72),
 }
+DOOR = {"ring", "glass", "handle"}
+HINGE = Vector((0.345, -0.24, 0.4))     # the program's door_hinge, in metres
+AXLE = Vector((0, 0, 0.4))              # the program's drum_spin axis runs along X through here
+PIVOTS = {"Door": HINGE, "Drum": AXLE, "Body": Vector((0, 0, 0))}
+PADDLE = (0.3, 0.31, 0.33)
+FRONT_X = Matrix.Rotation(math.radians(180), 4, "Z")   # its front (+X) to Blender -X, which is Unity +X
 
 glb = ROOT / "ArtSource" / "Washer.glb"
 fbx = ROOT / "Assets" / "Art" / "Models" / "Washer.fbx"
@@ -43,50 +52,48 @@ s3d.export(washer(**SIZE), str(glb))
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 bpy.ops.import_scene.gltf(filepath=str(glb))
+bpy.context.view_layer.update()
 
+parts = {"Body": [], "Door": [], "Drum": []}
+for ob in [o for o in bpy.data.objects if o.type == "MESH"]:
+    me = ob.data
+    group = "Door" if ob.name in DOOR else "Drum" if ob.name == "drum" else "Body"
+    parts[group].append(
+        ([(ob.matrix_world @ v.co).copy() for v in me.vertices], [tuple(p.vertices) for p in me.polygons], COLOR[ob.name]))
+
+# Four paddles inside the drum, across its axis.
+BOX = ((0, 4, 6, 2), (1, 3, 7, 5), (2, 6, 7, 3), (0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4))
+for y0, y1, z0, z1 in ((-0.02, 0.02, 0.555, 0.59), (-0.02, 0.02, 0.21, 0.245), (0.155, 0.19, 0.38, 0.42), (-0.19, -0.155, 0.38, 0.42)):
+    corners = [Vector((0.26 if i & 1 else -0.07, y1 if i & 2 else y0, z1 if i & 4 else z0)) for i in range(8)]
+    parts["Drum"].append((corners, BOX, PADDLE))
+
+bpy.ops.wm.read_factory_settings(use_empty=True)
 prop = bpy.data.materials.new("M_Prop")
 count = {}
-for ob in bpy.context.scene.objects:
-    if ob.type != "MESH":
-        continue
+for name, pieces in parts.items():
+    pivot = PIVOTS[name]
     bm = bmesh.new()
-    bm.from_mesh(ob.data)
     col = bm.loops.layers.color.new("Col")
-    c = COLOR[ob.name]
-    for face in bm.faces:
-        for loop in face.loops:
-            loop[col] = (c[0], c[1], c[2], 1)
-    bm.to_mesh(ob.data)
+    for positions, faces, c in pieces:
+        verts = [bm.verts.new(FRONT_X @ (p - pivot)) for p in positions]
+        for indices in faces:
+            face = bm.faces.new([verts[i] for i in indices])
+            face.smooth = False
+            for loop in face.loops:
+                loop[col] = (c[0], c[1], c[2], 1)
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
     bm.free()
-    ob.data.color_attributes.active_color = ob.data.color_attributes["Col"]
-    ob.data.color_attributes.render_color_index = ob.data.color_attributes.active_color_index
-    ob.data.materials.clear()
-    ob.data.materials.append(prop)
-    ob.data.calc_loop_triangles()
-    count[ob.name] = len(ob.data.loop_triangles)
+    me.materials.append(prop)
+    me.color_attributes.active_color = me.color_attributes["Col"]
+    ob = bpy.data.objects.new(name, me)
+    ob.location = FRONT_X @ pivot
+    bpy.context.scene.collection.objects.link(ob)
+    me.calc_loop_triangles()
+    count[name] = len(me.loop_triangles)
 print("TRIS", count, "TOTAL", sum(count.values()))
 
-if "--render" in sys.argv:
-    scene = bpy.context.scene
-    scene.render.engine = "BLENDER_WORKBENCH"
-    scene.display.shading.color_type = "VERTEX"
-    scene.display.shading.show_object_outline = True
-    scene.render.resolution_x, scene.render.resolution_y = 640, 640
-    cam = bpy.data.objects.new("cam", bpy.data.cameras.new("cam"))
-    scene.collection.objects.link(cam)
-    scene.camera = cam
-    cam.location = (1.6, -1.1, 1.3)  # Blender Z up after glTF import
-    cam.rotation_euler = (1.15, 0, 0.98)
-    scene.render.filepath = str(ROOT / "ArtSource" / "Washer_preview.png")
-    bpy.ops.render.render(write_still=True)
-    scene.collection.objects.unlink(cam)
-
-bpy.ops.export_scene.fbx(
-    filepath=str(fbx),
-    apply_scale_options="FBX_SCALE_UNITS",
-    object_types={"EMPTY", "MESH"},
-    mesh_smooth_type="FACE",
-    colors_type="LINEAR",
-    bake_anim=False,
-)
+bpy.ops.export_scene.fbx(filepath=str(fbx), axis_forward="-Z", axis_up="Y", apply_scale_options="FBX_SCALE_ALL",
+                         bake_space_transform=True, mesh_smooth_type="FACE", colors_type="LINEAR",
+                         object_types={"MESH"}, bake_anim=False)
 print("WROTE", fbx)
