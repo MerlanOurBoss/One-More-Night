@@ -647,14 +647,10 @@ curtain_rail("Rod_Bedroom", 0.1, 3.25, (0.3, 1.66, 3.05))
 curtain_rail("Rod_Kitchen", -2.62, -0.12, (-2.45, -1.37, -0.3))
 
 props = Part("Props_Bedroom", material("M_Prop"))
-# TV bracket and air conditioner
-props.box((3.04, 2.06, 1.2), (3.258, 2.32, 1.95), (0.84, 0.84, 0.82))
+# TV bracket. The air conditioner over x 3.0..3.24, z 1.01..1.95, is its own model: Aircon.fbx, from export_props.py.
 props.box((0.063, 1.1, -0.1), (0.072, 1.4, 0.3), (0.05, 0.05, 0.05))
 BED_METAL = (0.6, 0.6, 0.6)
 BED_DARK = (0.06, 0.06, 0.07)
-# Air conditioner: louvre and a small light.
-props.box((3.03, 2.08, 1.24), (3.045, 2.13, 1.91), (0.5, 0.5, 0.5))
-props.box((3.03, 2.25, 1.8), (3.04, 2.27, 1.84), (0.2, 0.7, 0.3))
 # Wardrobe handles.
 for i in range(WARDROBE_DOORS):
     x = 0.547 + i * WARDROBE_STEP + (WARDROBE_STEP - 0.05 if i % 2 == 0 else 0.03)
@@ -761,34 +757,24 @@ STEEL = (0.58, 0.6, 0.62)
 HANDLE = (0.7, 0.72, 0.74)
 KITCHEN_DARK = (0.05, 0.05, 0.06)
 
-# Fridge: freezer below, long handles, a few magnets and a note.
-props.box((-3.268, 0.0, 2.568), (-2.584, 1.72, 3.5), (0.5, 0.51, 0.52), skip=("x+",))
-props.rect((-2.584, 0.0, 2.568), (-2.584, 0.66, 3.5), (1, 0, 0), (0.42, 0.43, 0.44))
-props.rect((-2.584, 0.66, 2.568), (-2.584, 1.72, 3.5), (1, 0, 0), (0.54, 0.55, 0.56))
-props.box((-2.6, 0.65, 2.568), (-2.57, 0.67, 3.5), (0.2, 0.2, 0.2))
-props.box((-2.584, 0.76, 2.62), (-2.56, 1.3, 2.65), HANDLE)
-props.box((-2.584, 0.3, 2.62), (-2.56, 0.58, 2.65), HANDLE)
-props.box((-2.592, 1.22, 2.96), (-2.572, 1.42, 3.12), (0.86, 0.84, 0.72))
-props.box((-2.592, 1.4, 3.02), (-2.566, 1.44, 3.06), (0.72, 0.16, 0.14))
-props.box((-2.592, 1.1, 3.22), (-2.566, 1.16, 3.28), (0.2, 0.42, 0.62))
-props.box((-2.592, 1.34, 3.26), (-2.566, 1.4, 3.32), (0.84, 0.66, 0.2))
+# The fridge in x -3.25..-2.415, z 2.58..3.37, 1.79 high is its own model now:
+# Assets/Art/Models/Fridge.fbx, from ArtSource/export_fridge.py, placed in the scene.
 
-# Microwave on top: window, buttons, handle.
-props.box((-3.2, 1.72, 2.72), (-2.68, 2.0, 3.32), (0.78, 0.78, 0.78))
-props.box((-2.69, 1.75, 2.78), (-2.665, 1.97, 3.15), (0.1, 0.1, 0.1))
-props.box((-2.69, 1.75, 3.2), (-2.667, 1.97, 3.3), (0.3, 0.3, 0.32))
-props.box((-2.69, 1.75, 3.155), (-2.645, 1.97, 3.185), HANDLE)
-for y in (1.9, 1.83, 1.77):
-    props.box((-2.667, y, 3.22), (-2.654, y + 0.035, 3.28), (0.82, 0.82, 0.8))
+# The microwave on the fridge is its own model too: Microwave.fbx, from export_props.py.
 
 # Runs of cabinets on a recessed plinth.
 # The run right of the washing machine starts clear of it (the washer ends at z 1.02).
 props.box((-3.268, 0.0, 1.04), (-2.77, 0.1, 2.568), PLINTH, skip=("y+", "y-"))
-props.box((-3.268, 0.1, 1.04), (-2.72, 0.86, 2.568), GREY, skip=("y+",))
+# A real hole for the oven under the hob: Oven.fbx, from export_props.py, z 1.58..2.22, y 0.18..0.84.
+OVEN_Z0, OVEN_Z1, OVEN_Y0, OVEN_Y1 = 1.58, 2.22, 0.18, 0.84
+props.box((-3.268, 0.1, 1.04), (-2.72, 0.86, OVEN_Z0), GREY, skip=("y+",))
+props.box((-3.268, 0.1, OVEN_Z1), (-2.72, 0.86, 2.568), GREY, skip=("y+",))
+props.box((-3.268, 0.1, OVEN_Z0), (-2.72, OVEN_Y0, OVEN_Z1), GREY)
+props.box((-3.268, OVEN_Y1, OVEN_Z0), (-2.72, 0.86, OVEN_Z1), GREY, skip=("y+",))
 props.box((-3.268, 0.86, 1.03), (-2.68, 0.9, 2.568), TOP)
 props.box((-3.268, 0.0, -0.147), (-1.37, 0.1, 0.345), PLINTH, skip=("y+", "y-"))
 props.box((-3.268, 0.1, -0.147), (-1.32, 0.86, 0.395), GREY, skip=("y+",))
-for z0, z1 in ((1.05, 1.49), (2.31, 2.56)):
+for z0, z1 in ((1.05, OVEN_Z0 - 0.01), (OVEN_Z1 + 0.01, 2.56)):
     zc = (z0 + z1) / 2
     props.box((-2.72, 0.12, z0), (-2.705, 0.84, z1), FRONT)
     props.box((-2.705, 0.68, zc - 0.07), (-2.683, 0.7, zc + 0.07), HANDLE)
@@ -796,14 +782,6 @@ for x0, x1 in ((-2.6, -2.17), (-2.15, -1.74), (-1.72, -1.33)):
     xc = (x0 + x1) / 2
     props.box((x0, 0.12, 0.395), (x1, 0.84, 0.41), FRONT)
     props.box((xc - 0.07, 0.68, 0.41), (xc + 0.07, 0.7, 0.432), HANDLE)
-
-# Oven under the hob, with a towel on its handle.
-props.box((-2.72, 0.12, 1.5), (-2.705, 0.84, 2.3), STEEL)
-props.box((-2.705, 0.2, 1.58), (-2.692, 0.6, 2.22), KITCHEN_DARK)
-props.box((-2.705, 0.65, 1.58), (-2.665, 0.675, 2.22), HANDLE)
-for z in (1.62, 1.78, 2.02, 2.18):
-    props.box((-2.705, 0.74, z - 0.02), (-2.68, 0.79, z + 0.02), (0.2, 0.2, 0.22))
-props.box((-2.664, 0.4, 1.74), (-2.652, 0.68, 1.96), (0.7, 0.34, 0.26))
 
 # The counter top has a real hole with the sink sunk into it.
 props.box((-3.268, 0.86, -0.147), (-1.3, 0.9, 0.42), TOP, skip=("y+",))
@@ -1101,8 +1079,8 @@ mat = Part("Bath_Mat", material("M_BathMat"))
 mat.rect((-2.65, 0.012, -2.2), (-2.05, 0.012, -1.4), (0, 1, 0), uv="fill")
 
 kcur = Part("Curtains_Kitchen", material("M_CurtainGrey"))
-# The left one starts at the fridge's front, not inside the fridge.
-curtain(kcur, -2.56, -2.3, CURTAIN_Z, 0.03, 2.45, folds=2)
+# The left one starts past the fridge's handles (x -2.415), not inside the fridge.
+curtain(kcur, -2.4, -2.14, CURTAIN_Z, 0.03, 2.45, folds=2)
 curtain(kcur, -0.84, -0.2, CURTAIN_Z, 0.03, 2.45)
 ktul = Part("Tulle_Kitchen", material("M_Tulle"))
 curtain(ktul, -2.5, -0.62, TULLE_Z, 0.88, 2.45, folds=8, depth=0.02)   # short: ends just above the sill
@@ -1305,41 +1283,15 @@ def build_woman(part, ox, oz, pale=1.0):
         return (HEAD[0] + x2, HEAD[1] + y2, HEAD[2] + z1)
 
     limb([((0.0, 1.39, 0.005), 0.042), ((0.012, 1.46, 0.015), 0.036), (in_head(0, -0.09, -0.015), 0.036)], 6, lambda j: tint((1, 1, 1), 0.86), end=False)
-    RX, RY, RZ = 0.088, 0.122, 0.098
-    n = 10
-    rows, centers = [], []
-    for lat in (-78, -52, -26, 0, 26, 52, 76):
-        la = math.radians(lat)
-        ly = math.sin(la) * RY
-        k = math.cos(la)
-        # a narrow jaw
-        jaw = 1 - 0.28 * max(0.0, -ly / RY)
-        row = []
-        for i in range(n + 1):
-            a = -math.pi / 2 + 2 * math.pi * i / n
-            lx = RX * k * jaw * math.cos(a)
-            lz = RZ * k * math.sin(a)
-            uv = (0.75 + 0.24 * max(-1.0, min(1.0, lx / RX)), 0.25 + 0.24 * ly / RY)
-            row.append((place(in_head(lx, ly, lz)), uv, tint((1, 1, 1))))
-        rows.append(row)
-        centers.append(place(in_head(0, ly, 0)))
-    verts = part.loft(rows, centers, wrap=True)
-    middle = place(HEAD)
-    part.cap(verts[0], place(in_head(0, -RY, 0)), SKIN_UV, tint((0.8, 0.8, 0.8)), middle)
-    part.cap(verts[-1], place(in_head(0, RY, 0)), SKIN_UV, tint((0.8, 0.8, 0.8)), middle)
+    # The head itself is Head.fbx, from build_head.py: in the scene it is a child of this figure, its chin at (ox + 0.009, 1.476, oz).
 
-    # --- Hair: over the skull, then straight down to the waist. It parts over one side of the face,
-    # so you see an eye and half the mouth, and from every other side nothing at all.
+    # --- Hair: what falls from the head down to the waist. The head brings its own over the skull, down past the jaw.
     n = 18
     PART_AT = math.pi / 2 + 0.34
-    HAIR_DIM = (0.3, 0.3, 0.32, 0.5, 0.8, 1, 1, 1, 1, 1)
+    HAIR_DIM = (0.3, 0.3, 0.32, 0.5, 0.8)
     # (center, half width, half depth, half the gap in radians)
-    fall = []
-    for lat, gap in ((72, 0.08), (50, 0.16), (22, 0.27), (-8, 0.42), (-38, 0.46)):
-        la = math.radians(lat)
-        fall.append((in_head(0, math.sin(la) * RY * 1.08, -0.008), RX * math.cos(la) * 1.2 + 0.006, RZ * math.cos(la) * 1.2 + 0.006, gap))
-    fall += [((0.02, 1.43, 0.012), 0.125, 0.105, 0.42), ((0.012, 1.3, 0.008), 0.178, 0.112, 0.42), ((0.006, 1.12, 0.004), 0.15, 0.108, 0.44),
-             ((0.0, 0.96, 0.0), 0.128, 0.098, 0.48), ((0.0, 0.84, -0.004), 0.118, 0.09, 0.52)]
+    fall = [((0.02, 1.43, 0.012), 0.125, 0.105, 0.42), ((0.012, 1.3, 0.008), 0.178, 0.112, 0.42), ((0.006, 1.12, 0.004), 0.15, 0.108, 0.44),
+            ((0.0, 0.96, 0.0), 0.128, 0.098, 0.48), ((0.0, 0.84, -0.004), 0.118, 0.09, 0.52)]
     fall.reverse()
     rows, centers = [], []
     for j, (c, hx, hz, gap) in enumerate(fall):
@@ -1348,12 +1300,11 @@ def build_woman(part, ox, oz, pale=1.0):
             uneven = gap * (1 + 0.2 * math.sin(j * 2.1))
             a = PART_AT + uneven + (2 * math.pi - 2 * uneven) * i / n
             sway = 0.01 * math.sin(i * 2.3 + j) if j < 5 else 0.0
-            row.append((place(add(c, (hx * math.cos(a) + sway, 0, hz * math.sin(a)))), (0.505 + 0.485 * i / n, 0.505 + 0.49 * j / (len(fall) - 1)), (HAIR_DIM[j],) * 3))
+            row.append((place(add(c, (hx * math.cos(a) + sway, 0, hz * math.sin(a)))), (0.505 + 0.485 * i / n, 0.505 + 0.49 * j / 9), (HAIR_DIM[j],) * 3))    # the lower half of the atlas's hair: the upper half went over the skull
         rows.append(row)
         centers.append(place(c))
     verts = part.loft(rows, centers, wrap=False)
-    crown = in_head(0, RY * 1.22, -0.008)
-    tip = part.bm.verts.new(to_blender(place(crown)))
+    tip = part.bm.verts.new(to_blender(place((0.02, 1.53, 0.012))))    # closed off inside the head's hair
     away = to_blender(place(HEAD))
     top = verts[-1]
     for i in range(len(top)):
@@ -1386,14 +1337,14 @@ for part in Part.parts.values():
 
 # ---------------------------------------------------------------- bring over the scary pieces from the old room
 with bpy.data.libraries.load(OLD_BLEND, link=False) as (src, dst):
-    wanted = ["Safe", "Poster", "Window_Ghost", "Prints_1", "Prints_2", "Prints_3", "Door_Void", "Door_Face",
+    wanted = ["Poster",   # the safe is its own model now: Safe.fbx, from export_props.py, on the scene's Apartment/Safe
+ "Window_Ghost", "Prints_1", "Prints_2", "Prints_3", "Door_Void", "Door_Face",
               "Door_Fingers", "Futon_Hair", "Futon_Hand"]
     dst.objects = [n for n in src.objects if n in wanted]
 
 # name: (turn on the plan in degrees, dx, dy, dz) applied in Unity space, about the old room's origin.
 # A turn of 90 sends the old east-facing door onto the new north-facing entrance.
 MOVES = {
-    "Safe": (0, -0.8, 0, -0.7),
     "Poster": (90, 1.46, 0.55, -0.78),
     "Window_Ghost": (180, 0.9, 0.22, 1.93),
     "Prints_1": (0, 1.01, 0, 1.6),
@@ -1436,7 +1387,7 @@ for obj in collection.objects:
 print("RESULT tris total", sum(tris.values()))
 print("RESULT", sorted(tris.items(), key=lambda kv: -kv[1])[:12])
 print("RESULT missing old:", [n for n in MOVES if n not in tris])
-for name in ("Poster", "Window_Ghost", "Door_Void", "Door_Face", "Door_Fingers", "Futon_Body", "Safe", "Prints_1", "Prints_3", "Figure_Corner"):
+for name in ("Poster", "Window_Ghost", "Door_Void", "Door_Face", "Door_Fingers", "Futon_Body", "Prints_1", "Prints_3", "Figure_Corner"):
     o = bpy.data.objects[name]
     vs = [Vector((-v.co.x, v.co.z, -v.co.y)) for v in o.data.vertices]
     lo = [min(p[i] for p in vs) for i in range(3)]
