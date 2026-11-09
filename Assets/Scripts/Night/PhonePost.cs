@@ -50,14 +50,20 @@ public class PhonePost : MonoBehaviour
     /// <summary>A new run: nobody has called yet.</summary>
     public void Clear()
     {
-        StopAllCoroutines();
+        HangUp();
         pending = Call.None;
         Ringing = false;
-        Talking = false;
         dayRung = -1;
         nightRung = -1;
         lastPhase = NightLoop.Phase.Transition;
         bell.Stop();
+    }
+
+    /// <summary>The line goes dead: the day or the night is over, whoever was talking.</summary>
+    public void HangUp()
+    {
+        StopAllCoroutines();
+        Talking = false;
         earpiece.Stop();
         caption.gameObject.SetActive(false);
     }

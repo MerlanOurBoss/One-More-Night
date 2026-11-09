@@ -11,6 +11,8 @@ public abstract class Anomaly : MonoBehaviour
     public int FirstNight => firstNight;
     public int Stage { get; private set; }
     public bool Active => Stage > 0;
+    /// <summary>Whether there is anything to see yet: only then can it be caught on film.</summary>
+    public virtual bool Showing => Active;
     public Bounds Bounds => GetComponent<Renderer>().bounds;
     public Vector3 Center => Bounds.center;
 

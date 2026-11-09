@@ -39,6 +39,8 @@ public class NightLoop : MonoBehaviour
     [SerializeField] NoteCollection notes;
     [SerializeField] SafeLock safeLock;
     [SerializeField] DoorSwing[] insideDoors = new DoorSwing[0];
+    [Tooltip("Doors you open by hand that are not anomalies: a new run shuts them too.")]
+    [SerializeField] TransformAnomaly[] plainHandDoors = new TransformAnomaly[0];
     [SerializeField] ComputerDesk desk;
     [SerializeField] DoorPeephole peephole;
     [SerializeField] PhonePost phone;
@@ -65,8 +67,10 @@ public class NightLoop : MonoBehaviour
     [SerializeField] int falseReportFine = 5000;
     [Tooltip("What the client pays extra for a photo with her on it. She comes a step closer for it.")]
     [SerializeField] int ghostReward = 8000;
-    [SerializeField] int secondAnomalyFromNight = 3;
-    [SerializeField] float secondAnomalyChance = 0.5f;
+    [Tooltip("How many new anomalies the first night brings.")]
+    [SerializeField] int anomaliesFirstNight = 1;
+    [Tooltip("How many more each night after that brings.")]
+    [SerializeField] int anomaliesAddedPerNight = 1;
 
     [Header("Photo camera")]
     [SerializeField] GameObject viewfinder;
@@ -276,6 +280,8 @@ public class NightLoop : MonoBehaviour
         viewfinder.SetActive(aiming);
         hand.enabled = Started && !aiming && !AtDesk && !Peeping && !OnPhone;
         view.fieldOfView = AtDesk ? desk.FieldOfView : aiming ? aimFieldOfView : normalFieldOfView;
+        if (player.Whipping)
+            view.fieldOfView = Mathf.Lerp(view.fieldOfView, player.WhipFieldOfView, player.WhipZoom);
         filmText.text = Film.ToString();
         filmText.color = Film > 0 ? Color.white : fineColor;
         foreach (Anomaly anomaly in anomalies)
@@ -353,12 +359,16 @@ public class NightLoop : MonoBehaviour
         if (!Physics.Raycast(ray, out RaycastHit hit, reach, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             return null;
         bool day = CurrentPhase == Phase.Day;
-        bool usable = hit.collider == futon || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || (phone != null && hit.collider == phone.GetComponent<Collider>() && phone.Ringing) || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
+        TransformAnomaly handDoor = hit.collider.GetComponent<TransformAnomaly>();
+        bool usable = hit.collider == futon || (handDoor != null && handDoor.OpensByHand) || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || (phone != null && hit.collider == phone.GetComponent<Collider>() && phone.Ringing) || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
         return usable ? hit.collider : null;
     }
 
     string PromptFor(Collider target)
     {
+        TransformAnomaly handDoor = target.GetComponent<TransformAnomaly>();
+        if (handDoor != null && handDoor.OpensByHand)
+            return handDoor.OpenedByHand ? "закрыть дверцу" : "открыть дверцу";
         DoorSwing swing = target.GetComponent<DoorSwing>();
         if (swing != null)
             return swing.IsOpen ? "закрыть дверь" : "открыть дверь";
@@ -380,6 +390,12 @@ public class NightLoop : MonoBehaviour
     void Use(Collider target)
     {
         hints.MarkUsed(PromptFor(target));
+        TransformAnomaly handDoor = target.GetComponent<TransformAnomaly>();
+        if (handDoor != null && handDoor.OpensByHand)
+        {
+            handDoor.ToggleByHand();
+            return;
+        }
         DoorSwing swing = target.GetComponent<DoorSwing>();
         if (swing != null)
         {
@@ -424,7 +440,7 @@ public class NightLoop : MonoBehaviour
         var photographed = new List<Anomaly>();
         foreach (Anomaly anomaly in anomalies)
         {
-            if (anomaly.Active && InPhoto(anomaly))
+            if (anomaly.Showing && InPhoto(anomaly))
                 photographed.Add(anomaly);
         }
 
@@ -549,7 +565,7 @@ public class NightLoop : MonoBehaviour
                 calm.Add(anomaly);
         }
 
-        int count = Night >= secondAnomalyFromNight && Random.value < secondAnomalyChance ? 2 : 1;
+        int count = anomaliesFirstNight + anomaliesAddedPerNight * (Night - 1);
         for (int i = 0; i < count && calm.Count > 0; i++)
         {
             int pick = Random.Range(0, calm.Count);
@@ -720,6 +736,8 @@ public class NightLoop : MonoBehaviour
         safeLock.Clear();
         foreach (DoorSwing swing in insideDoors)
             swing.Restore();
+        foreach (TransformAnomaly handDoor in plainHandDoors)
+            handDoor.Clear();
         BackToDay();
     }
 
@@ -868,6 +886,8 @@ public class NightLoop : MonoBehaviour
             desk.Stand();
         if (Peeping)
             peephole.Close();
+        if (OnPhone)
+            phone.HangUp();
         CurrentPhase = Phase.Transition;
         player.Frozen = true;
         photoPrint.PutAway();

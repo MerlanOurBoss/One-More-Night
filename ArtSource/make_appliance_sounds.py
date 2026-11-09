@@ -1,6 +1,6 @@
 """Synthesizes the appliances' sounds: 22 kHz mono, loops seamless. Needs numpy; run with any Python that has it:
 C:/Users/merla/Tools/sand3d-env/Scripts/python.exe ArtSource/make_appliance_sounds.py
-Writes Assets/Audio/{fridge_hum,aircon_fan,microwave_hum,washer_drum,washer_thump,microwave_beep}.wav. Written blind: judge by ear.
+Writes Assets/Audio/{fridge_hum,aircon_fan,microwave_hum,washer_drum,washer_thump,microwave_beep,appliance_open,appliance_close}.wav. Written blind: judge by ear.
 """
 import wave
 from pathlib import Path
@@ -87,3 +87,13 @@ for start in (0.0, 0.4, 0.8):
     beep += gate * np.sign(np.sin(2 * np.pi * 1850 * t)) * 0.5
 edge = np.minimum(1, np.minimum(t, t[-1] - t) * 200)
 save("microwave_beep", beep * edge, peak=0.55)
+
+# An appliance door pulled open: the seal lets go, and the door's weight comes along.
+t = np.arange(int(0.4 * RATE)) / RATE
+pop = np.exp(-t * 18) * np.sin(2 * np.pi * 95 * t) + 0.45 * np.exp(-t * 45) * looping_noise(0.4, 700, 3000)[:len(t)]
+save("appliance_open", pop * np.minimum(1, (t[-1] - t) * 40), peak=0.6)
+
+# Pushed shut: a soft thud, and the latch.
+t = np.arange(int(0.35 * RATE)) / RATE
+thud = np.exp(-t * 24) * np.sin(2 * np.pi * 72 * t) + 0.5 * np.exp(-t * 80) * looping_noise(0.35, 500, 2500)[:len(t)]
+save("appliance_close", thud * np.minimum(1, (t[-1] - t) * 40), peak=0.65)

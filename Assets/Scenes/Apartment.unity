@@ -857,6 +857,12 @@ MonoBehaviour:
   - {fileID: 1880912237}
   sneaks: 1
   swingSeconds: 1.2
+  opensByHand: 1
+  handSeconds: 0.5
+  openClip: {fileID: 8300000, guid: d3dcf4b780ea09e42b105e2ca1d2a76d, type: 3}
+  closeClip: {fileID: 8300000, guid: 8bac35b0407fde14a85c26bfd2f7a38c, type: 3}
+  handExtras:
+  - {fileID: 1880912236}
 --- !u!64 &110601516
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -2390,6 +2396,7 @@ GameObject:
   - component: {fileID: 269792371}
   - component: {fileID: 269792370}
   - component: {fileID: 269792369}
+  - component: {fileID: 269792372}
   m_Layer: 0
   m_Name: Head
   m_TagString: Untagged
@@ -2469,6 +2476,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 6273263315972808177}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &269792372
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 269792368}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 6
+  maxAngle: 180
+  maxPitch: 35
+  onlyUnseen: 1
+  lookAway: 0
 --- !u!1 &300095742
 GameObject:
   m_ObjectHideFlags: 0
@@ -3672,6 +3697,7 @@ GameObject:
   - component: {fileID: 494998558}
   - component: {fileID: 494998560}
   - component: {fileID: 494998559}
+  - component: {fileID: 494998561}
   m_Layer: 0
   m_Name: Microwave_Face
   m_TagString: Untagged
@@ -3751,6 +3777,24 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 494998557}
   m_Mesh: {fileID: -8839368762345780380, guid: 783b5720bfc71be4c8195eee78fe337e, type: 3}
+--- !u!114 &494998561
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 494998557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 30
+  maxAngle: 35
+  maxPitch: 35
+  onlyUnseen: 0
+  lookAway: 30
 --- !u!1 &512883216
 GameObject:
   m_ObjectHideFlags: 0
@@ -4513,6 +4557,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!1 &545535847
 GameObject:
   m_ObjectHideFlags: 0
@@ -6507,6 +6556,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -350582123360275156, guid: b1290a34e7861cc4db56f37fb6cea3db, type: 3}
       insertIndex: -1
       addedObject: {fileID: 907973405}
+    - targetCorrespondingSourceObject: {fileID: -350582123360275156, guid: b1290a34e7861cc4db56f37fb6cea3db, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 907973408}
     - targetCorrespondingSourceObject: {fileID: -8749434616431758474, guid: b1290a34e7861cc4db56f37fb6cea3db, type: 3}
       insertIndex: -1
       addedObject: {fileID: 907973404}
@@ -6605,6 +6657,41 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 6389111521707591071, guid: b1290a34e7861cc4db56f37fb6cea3db, type: 3}
   m_PrefabInstance: {fileID: 907973399}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &907973408
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 907973402}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 460438dc81ab8d44d8ea0a6a0be1678b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TransformAnomaly
+  firstNight: 1
+  stages:
+  - offset: {x: 0, y: 0, z: 0}
+    rotation: {x: 0, y: -70, z: 0}
+    scale: {x: 1, y: 1, z: 1}
+  pivotPoint: {fileID: 907973409}
+  hiddenWhenCalm: 0
+  onlyThroughLens: 0
+  stageExtras: []
+  extrasFromStage: 1
+  lensOnlyExtras: []
+  sneaks: 0
+  swingSeconds: 2
+  opensByHand: 1
+  handSeconds: 0.5
+  openClip: {fileID: 8300000, guid: d3dcf4b780ea09e42b105e2ca1d2a76d, type: 3}
+  closeClip: {fileID: 8300000, guid: 8bac35b0407fde14a85c26bfd2f7a38c, type: 3}
+  handExtras: []
+--- !u!4 &907973409 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -4573759483581473905, guid: b1290a34e7861cc4db56f37fb6cea3db, type: 3}
+  m_PrefabInstance: {fileID: 907973399}
+  m_PrefabAsset: {fileID: 0}
 --- !u!114 &907973410
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6640,6 +6727,12 @@ MonoBehaviour:
   - {fileID: 1513666958}
   sneaks: 1
   swingSeconds: 2.5
+  opensByHand: 1
+  handSeconds: 0.5
+  openClip: {fileID: 8300000, guid: d3dcf4b780ea09e42b105e2ca1d2a76d, type: 3}
+  closeClip: {fileID: 8300000, guid: 8bac35b0407fde14a85c26bfd2f7a38c, type: 3}
+  handExtras:
+  - {fileID: 1513666957}
 --- !u!1 &923149178
 GameObject:
   m_ObjectHideFlags: 0
@@ -7949,6 +8042,7 @@ GameObject:
   - component: {fileID: 1094902463}
   - component: {fileID: 1094902462}
   - component: {fileID: 1094902461}
+  - component: {fileID: 1094902464}
   m_Layer: 0
   m_Name: Head
   m_TagString: Untagged
@@ -8028,6 +8122,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2871503685175868967}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1094902464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1094902460}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 9
+  maxAngle: 180
+  maxPitch: 35
+  onlyUnseen: 0
+  lookAway: 0
 --- !u!1 &1107837097 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 87c4c86d661ba7e48812e458bd508124, type: 3}
@@ -8820,6 +8932,8 @@ MonoBehaviour:
   - {fileID: 1589143134}
   - {fileID: 867445282}
   - {fileID: 33816120}
+  plainHandDoors:
+  - {fileID: 907973408}
   desk: {fileID: 1058359195}
   peephole: {fileID: 223362405}
   phone: {fileID: 1848012669}
@@ -8854,8 +8968,8 @@ MonoBehaviour:
   reportRewardPerNight: 2000
   falseReportFine: 5000
   ghostReward: 8000
-  secondAnomalyFromNight: 3
-  secondAnomalyChance: 0.5
+  anomaliesFirstNight: 1
+  anomaliesAddedPerNight: 1
   viewfinder: {fileID: 773075345}
   photoFrame:
     serializedVersion: 2
@@ -8881,7 +8995,7 @@ MonoBehaviour:
   nightsText: {fileID: 1265870277}
   fineColor: {r: 0.8, g: 0.1, b: 0.1, a: 1}
   lostFace: {fileID: 1173873712}
-  goal: 100000
+  goal: 200000
   moneyShownFor: 4
   nightCardShownFor: 1.5
   lastNightDoorOpens: 7
@@ -9282,6 +9396,12 @@ MonoBehaviour:
   - {fileID: 1299967248}
   sneaks: 1
   swingSeconds: 1.2
+  opensByHand: 1
+  handSeconds: 0.5
+  openClip: {fileID: 8300000, guid: d3dcf4b780ea09e42b105e2ca1d2a76d, type: 3}
+  closeClip: {fileID: 8300000, guid: 8bac35b0407fde14a85c26bfd2f7a38c, type: 3}
+  handExtras:
+  - {fileID: 1299967246}
 --- !u!1 &1299967246
 GameObject:
   m_ObjectHideFlags: 0
@@ -9293,6 +9413,7 @@ GameObject:
   - component: {fileID: 1299967247}
   - component: {fileID: 1299967249}
   - component: {fileID: 1299967248}
+  - component: {fileID: 1299967250}
   m_Layer: 0
   m_Name: Oven_Face
   m_TagString: Untagged
@@ -9372,6 +9493,24 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1299967246}
   m_Mesh: {fileID: -8839368762345780380, guid: 783b5720bfc71be4c8195eee78fe337e, type: 3}
+--- !u!114 &1299967250
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1299967246}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 30
+  maxAngle: 40
+  maxPitch: 35
+  onlyUnseen: 0
+  lookAway: 35
 --- !u!1 &1309282607
 GameObject:
   m_ObjectHideFlags: 0
@@ -9707,6 +9846,12 @@ MonoBehaviour:
   - {fileID: 494998559}
   sneaks: 1
   swingSeconds: 1.5
+  opensByHand: 1
+  handSeconds: 0.5
+  openClip: {fileID: 8300000, guid: d3dcf4b780ea09e42b105e2ca1d2a76d, type: 3}
+  closeClip: {fileID: 8300000, guid: 8bac35b0407fde14a85c26bfd2f7a38c, type: 3}
+  handExtras:
+  - {fileID: 494998557}
 --- !u!1 &1400158701
 GameObject:
   m_ObjectHideFlags: 0
@@ -10184,6 +10329,7 @@ GameObject:
   - component: {fileID: 1513666960}
   - component: {fileID: 1513666959}
   - component: {fileID: 1513666958}
+  - component: {fileID: 1513666961}
   m_Layer: 0
   m_Name: Fridge_Face
   m_TagString: Untagged
@@ -10263,6 +10409,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 907973400}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1513666961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1513666957}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 30
+  maxAngle: 60
+  maxPitch: 35
+  onlyUnseen: 0
+  lookAway: 55
 --- !u!1 &1526175094
 GameObject:
   m_ObjectHideFlags: 0
@@ -12327,6 +12491,7 @@ GameObject:
   - component: {fileID: 1880912239}
   - component: {fileID: 1880912238}
   - component: {fileID: 1880912237}
+  - component: {fileID: 1880912240}
   m_Layer: 0
   m_Name: Washer_Face
   m_TagString: Untagged
@@ -12406,6 +12571,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 110601513}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1880912240
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1880912236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e431c6275cf3ead4f8f8053509703e2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HeadWatch
+  view: {fileID: 1932653974}
+  degreesPerSecond: 30
+  maxAngle: 45
+  maxPitch: 35
+  onlyUnseen: 0
+  lookAway: 40
 --- !u!1 &1932653971
 GameObject:
   m_ObjectHideFlags: 0
@@ -13740,6 +13923,7 @@ GameObject:
   - component: {fileID: 4110562249368609168}
   - component: {fileID: 5154957354602072410}
   - component: {fileID: 8013764473518791255}
+  - component: {fileID: 8013764473518791256}
   m_Layer: 0
   m_Name: Figure_Lens
   m_TagString: Untagged
@@ -15656,6 +15840,7 @@ GameObject:
   - component: {fileID: 2593999712170061009}
   - component: {fileID: 8584803113325793086}
   - component: {fileID: 8584803113325793087}
+  - component: {fileID: 8584803113325793088}
   m_Layer: 0
   m_Name: Figure_Corner
   m_TagString: Untagged
@@ -17072,6 +17257,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!33 &6331663612450447959
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -17269,6 +17459,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!1 &6674941057583197784
 GameObject:
   m_ObjectHideFlags: 0
@@ -17349,6 +17544,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!1 &6741396863511679984
 GameObject:
   m_ObjectHideFlags: 0
@@ -17510,6 +17710,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!64 &7277904127210817655
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -17645,6 +17850,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!64 &7572895694478189988
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -17959,6 +18169,33 @@ MonoBehaviour:
   - {fileID: 1094902461}
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
+--- !u!114 &8013764473518791256
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 187047811565753896}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7d0c6437248b85489f459ff0bd8a62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GhostScare
+  anomaly: {fileID: 8013764473518791255}
+  head: {fileID: 1094902464}
+  loop: {fileID: 1253289800}
+  player: {fileID: 1486837576}
+  sound: {fileID: 178552858}
+  maxDistance: 5
+  faceFills: 1
+  turnSeconds: 0.16
+  holdSeconds: 0.7
+  releaseSeconds: 0.3
 --- !u!4 &8113201543724570695
 Transform:
   m_ObjectHideFlags: 0
@@ -18207,6 +18444,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!4 &8548295294875162428
 Transform:
   m_ObjectHideFlags: 0
@@ -18302,6 +18544,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!1 &8561935529875604421
 GameObject:
   m_ObjectHideFlags: 0
@@ -18423,6 +18670,33 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
+--- !u!114 &8584803113325793088
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4190450350232858406}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d7d0c6437248b85489f459ff0bd8a62d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GhostScare
+  anomaly: {fileID: 8584803113325793087}
+  head: {fileID: 269792372}
+  loop: {fileID: 1253289800}
+  player: {fileID: 1486837576}
+  sound: {fileID: 178552858}
+  maxDistance: 5
+  faceFills: 1
+  turnSeconds: 0.16
+  holdSeconds: 0.7
+  releaseSeconds: 0.3
 --- !u!33 &8616293282050736784
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -18585,6 +18859,11 @@ MonoBehaviour:
   lensOnlyExtras: []
   sneaks: 0
   swingSeconds: 2
+  opensByHand: 0
+  handSeconds: 0.5
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  handExtras: []
 --- !u!33 &9121174945448678288
 MeshFilter:
   m_ObjectHideFlags: 0

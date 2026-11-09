@@ -30,9 +30,20 @@ public class TransformAnomaly : Anomaly
     [SerializeField] bool sneaks;
     [SerializeField] float swingSeconds = 2f;
 
+    [Header("By hand")]
+    [Tooltip("The player can open it, as far as its last stage. Shut again, it only goes back to what its stage holds it at: an open anomaly's door will not close.")]
+    [SerializeField] bool opensByHand;
+    [SerializeField] float handSeconds = 0.5f;
+    [SerializeField] AudioClip openClip;
+    [SerializeField] AudioClip closeClip;
+    [Tooltip("Of the stage extras, those already there at any stage if you open it yourself.")]
+    [SerializeField] GameObject[] handExtras = new GameObject[0];
+
     int shownStage;
     int pendingStage;
+    bool handOpen;
     bool swinging;
+    float swingLength;
     float swingTime;
     Vector3 swingFromPosition;
     Quaternion swingFromRotation;
@@ -47,9 +58,14 @@ public class TransformAnomaly : Anomaly
     bool aiming;
 
     public override int StageCount => stages.Length;
+    /// <summary>A door still waiting to move looks like any other shut door.</summary>
+    public override bool Showing => shownStage > 0;
 
     public bool Sneaks => sneaks;
     public bool Pending => pendingStage > 0;
+    /// <summary>At its last stage it stands as wide as it goes, and there is nothing left to do with it.</summary>
+    public bool OpensByHand => opensByHand && shownStage < stages.Length;
+    public bool OpenedByHand => handOpen;
 
     void Awake()
     {
@@ -74,14 +90,15 @@ public class TransformAnomaly : Anomaly
         if (sneaks && stage > shownStage)
         {
             pendingStage = stage;
-            swinging = false;
             return;
         }
 
         pendingStage = 0;
         swinging = false;
         shownStage = stage;
-        Pose pose = PoseAt(stage);
+        if (stage == 0)
+            handOpen = false;
+        Pose pose = ShownPose();
         transform.localScale = Vector3.Scale(homeScale, pose.scale);
         transform.SetPositionAndRotation(PositionAt(pose), RotationAt(pose));
         ShowExtras(stage);
@@ -93,14 +110,36 @@ public class TransformAnomaly : Anomaly
     {
         if (!Pending)
             return;
-        Pose pose = PoseAt(pendingStage);
         shownStage = pendingStage;
         pendingStage = 0;
         ShowExtras(shownStage);
+        SwingToShownPose(swingSeconds);
+    }
+
+    /// <summary>The player opens or shuts it. A stage that was waiting for them to look away has been caught at it.</summary>
+    public void ToggleByHand()
+    {
+        handOpen = !handOpen;
+        if (Pending)
+        {
+            shownStage = pendingStage;
+            pendingStage = 0;
+        }
+        ShowExtras(shownStage);
+        SwingToShownPose(handSeconds);
+        AudioClip clip = handOpen ? openClip : closeClip;
+        if (clip != null)
+            AudioSource.PlayClipAtPoint(clip, Center);
+    }
+
+    void SwingToShownPose(float seconds)
+    {
+        Pose pose = ShownPose();
         swingFromPosition = transform.position;
         swingFromRotation = transform.rotation;
         swingToPosition = PositionAt(pose);
         swingToRotation = RotationAt(pose);
+        swingLength = seconds;
         swingTime = 0f;
         swinging = true;
     }
@@ -110,11 +149,13 @@ public class TransformAnomaly : Anomaly
         if (!swinging)
             return;
         swingTime += Time.deltaTime;
-        float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(swingTime / swingSeconds));
+        float t = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(swingTime / swingLength));
         transform.SetPositionAndRotation(Vector3.Lerp(swingFromPosition, swingToPosition, t), Quaternion.Slerp(swingFromRotation, swingToRotation, t));
-        if (swingTime >= swingSeconds)
+        if (swingTime >= swingLength)
             swinging = false;
     }
+
+    Pose ShownPose() => handOpen ? stages[stages.Length - 1] : PoseAt(shownStage);
 
     Pose PoseAt(int stage) => stage == 0 ? new Pose { scale = Vector3.one } : stages[stage - 1];
 
@@ -124,8 +165,9 @@ public class TransformAnomaly : Anomaly
 
     void ShowExtras(int stage)
     {
+        bool byHand = handOpen && stage > 0;
         for (int i = 0; i < stageExtras.Length; i++)
-            stageExtras[i].SetActive(stage >= extrasFromStage + i);
+            stageExtras[i].SetActive(stage >= extrasFromStage + i || (byHand && Array.IndexOf(handExtras, stageExtras[i]) >= 0));
     }
 
     public override void CollectParts(List<Bounds> parts)
