@@ -23,17 +23,40 @@ public class DoorSwing : MonoBehaviour
     Quaternion homeRotation;
     float yaw;
     float targetYaw;
+    float speed;
 
     public bool IsOpen => targetYaw == 0f;
+    /// <summary>All the way shut, and staying so.</summary>
+    public bool IsShut => yaw == closedYaw && targetYaw == closedYaw;
+    public Vector3 Hinge => hinge;
 
     void Awake()
     {
         homePosition = transform.position;
         homeRotation = transform.rotation;
+        speed = degreesPerSecond;
+    }
+
+    /// <summary>Shut while nobody can see, in the dark between day and night. Not onto anyone standing in the way.</summary>
+    public void ShutQuietly()
+    {
+        if (HitsPlayer(closedYaw))
+            return;
+        yaw = targetYaw = closedYaw;
+        Apply();
+    }
+
+    /// <summary>Swings open by itself, slowly, this share of the way, with a creak.</summary>
+    public void OpenBySelf(float seconds, float share)
+    {
+        targetYaw = closedYaw * (1f - share);
+        speed = Mathf.Abs(targetYaw - yaw) / Mathf.Max(0.1f, seconds);
+        sound.PlayCreakApart(GetComponent<Renderer>().bounds.center);
     }
 
     public void Toggle()
     {
+        speed = degreesPerSecond;
         if (IsOpen)
         {
             targetYaw = closedYaw;
@@ -51,6 +74,7 @@ public class DoorSwing : MonoBehaviour
     {
         targetYaw = 0f;
         yaw = 0f;
+        speed = degreesPerSecond;
         Apply();
     }
 
@@ -59,7 +83,7 @@ public class DoorSwing : MonoBehaviour
         if (yaw == targetYaw)
             return;
 
-        float next = Mathf.MoveTowards(yaw, targetYaw, degreesPerSecond * Time.deltaTime);
+        float next = Mathf.MoveTowards(yaw, targetYaw, speed * Time.deltaTime);
         if (HitsPlayer(next))
             return;
         yaw = next;
