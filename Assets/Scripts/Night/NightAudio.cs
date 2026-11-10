@@ -52,7 +52,27 @@ public class NightAudio : MonoBehaviour
     [SerializeField] float stepLength = 0.8f;
     [SerializeField] float stepVolume = 0.45f;
 
+    [Header("Steps behind you: someone runs up and stops at your back")]
+    [Tooltip("A 3D source of its own, moved step by step.")]
+    [SerializeField] AudioSource stalker;
+    [SerializeField] int stalkerFromNight = 2;
+    [Tooltip("The chance that a night event is this one. At most once a night.")]
+    [SerializeField, Range(0f, 1f)] float stalkerChance = 0.25f;
+    [Tooltip("Only once you have stood still this long: they must not pass for your own.")]
+    [SerializeField] float stalkerAfterStill = 1.5f;
+    [SerializeField] int stalkerSteps = 9;
+    [Tooltip("Seconds between the first steps, and between the last ones.")]
+    [SerializeField] Vector2 stalkerGap = new Vector2(0.6f, 0.22f);
+    [SerializeField] float stalkerStartDistance = 6f;
+    [SerializeField] float stalkerStopDistance = 0.7f;
+    [Tooltip("Lower than yours: heavier.")]
+    [SerializeField] float stalkerPitch = 0.82f;
+    [SerializeField] Vector2 stalkerVolume = new Vector2(0.35f, 1f);
+
     Vector3 lastPlayerPosition;
+    float stillSince;
+    bool stalking;
+    int stalkedNight = -1;
     float walked;
     float nextEventTime;
     NightLoop.Phase lastPhase;
@@ -106,6 +126,9 @@ public class NightAudio : MonoBehaviour
         moved.y = 0f;
         lastPlayerPosition = player.position;
 
+        if (moved.sqrMagnitude > 0.0001f)
+            stillSince = Time.time;
+
         // A teleport is not a step.
         if (moved.magnitude > 0.5f)
             return;
@@ -126,6 +149,14 @@ public class NightAudio : MonoBehaviour
 
     void PlayEvent()
     {
+        if (stalker != null && !stalking && loop.Night >= stalkerFromNight && stalkedNight != loop.Night
+            && Time.time - stillSince >= stalkerAfterStill && Random.value < stalkerChance
+            && FindStalkerStart(out Vector3 from, out Vector3 away))
+        {
+            StartCoroutine(StepsBehind(from, away));
+            return;
+        }
+
         switch (Random.Range(0, 4))
         {
             case 0: PlayInWorld(knock, door.position); break;
@@ -133,6 +164,52 @@ public class NightAudio : MonoBehaviour
             case 2: PlayInWorld(overhead, player.position + Vector3.up * 2.6f); break;
             default: PlayInWorld(mutter, voicesPoint.position); break;
         }
+    }
+
+    /// <summary>
+    /// Where they start: as far behind you as the flat goes, or a little to the side, on its floor.
+    /// Walls do not stop the sound, so it may well be the next room.
+    /// </summary>
+    public bool FindStalkerStart(out Vector3 from, out Vector3 away)
+    {
+        Vector3 back = -player.forward;
+        back.y = 0f;
+        back.Normalize();
+        for (float distance = stalkerStartDistance; distance >= stalkerStopDistance + 2f; distance -= 0.5f)
+        {
+            // Straight behind first; in a corner, from the side.
+            foreach (float turn in new[] { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 120f, -120f })
+            {
+                away = Quaternion.Euler(0f, turn, 0f) * back;
+                from = player.position + away * distance;
+                // Under the ceiling, straight down onto a room's floor: not into furniture, not out on the balcony.
+                if (Physics.Raycast(new Vector3(from.x, 2f, from.z), Vector3.down, out RaycastHit floor, 2.5f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore)
+                    && floor.point.y < 0.05f && floor.collider.name.StartsWith("Floor_"))
+                    return true;
+            }
+        }
+        from = away = Vector3.zero;
+        return false;
+    }
+
+    /// <summary>Far off behind you, then faster and louder, the last one right at your back. Then nothing.</summary>
+    public System.Collections.IEnumerator StepsBehind(Vector3 from, Vector3 away)
+    {
+        stalking = true;
+        stalkedNight = loop.Night;
+        for (int i = 0; i < stalkerSteps && loop.CurrentPhase == NightLoop.Phase.Night; i++)
+        {
+            float t = i / (stalkerSteps - 1f);
+            // It ends at your back where you stand now, along the way it came.
+            Vector3 to = player.position + away * stalkerStopDistance;
+            Vector3 at = Vector3.Lerp(from, to, t);
+            at.y = 0.05f;
+            stalker.transform.position = at;
+            stalker.pitch = stalkerPitch * Random.Range(0.96f, 1.04f);
+            stalker.PlayOneShot(footsteps[Random.Range(0, footsteps.Length)], Mathf.Lerp(stalkerVolume.x, stalkerVolume.y, t * t));
+            yield return new WaitForSeconds(Mathf.Lerp(stalkerGap.x, stalkerGap.y, t));
+        }
+        stalking = false;
     }
 
     void PlayInWorld(AudioClip clip, Vector3 position)
@@ -154,6 +231,8 @@ public class NightAudio : MonoBehaviour
     public void PlayDoorOpen() => camera2D.PlayOneShot(doorOpen);
     public void PlayDoorClose() => camera2D.PlayOneShot(doorClose);
     public void PlayCreakAt(Vector3 position) => PlayInWorld(creak, position);
+    /// <summary>A creak that stays where it began, however many others start meanwhile.</summary>
+    public void PlayCreakApart(Vector3 position) => AudioSource.PlayClipAtPoint(creak, position);
     public void PlayKnock() => PlayInWorld(knock, door.position);
     public void PlayShutterAt(Vector3 position) => PlayInWorld(shutter, position);
 }
