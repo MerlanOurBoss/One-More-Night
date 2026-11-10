@@ -143,6 +143,9 @@ public class ComputerDesk : MonoBehaviour
 
     void Update()
     {
+        // Its keys are read straight from the keyboard, which the pause does not switch off.
+        if (PauseMenu.Paused)
+            return;
         if (!Seated)
         {
             MaybeTurnOnAtNight();

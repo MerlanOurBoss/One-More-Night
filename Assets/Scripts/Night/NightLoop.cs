@@ -59,6 +59,8 @@ public class NightLoop : MonoBehaviour
     [SerializeField, Range(0f, 1f)] float dayEndsAt = 0.25f;
     [SerializeField] ControlHints hints;
     [SerializeField] GameObject titleScreen;
+    [Tooltip("What the job is, before the first day. Shown once a session.")]
+    [SerializeField] IntroCards intro;
 
     [Header("Anomalies")]
     [SerializeField] Anomaly[] anomalies;
@@ -122,6 +124,8 @@ public class NightLoop : MonoBehaviour
     [SerializeField] float nightBrightness = 0.5f;
 
     public Phase CurrentPhase { get; private set; } = Phase.Day;
+    /// <summary>In the dark before a night begins, once its anomalies are in place: the time to rearrange the flat unseen.</summary>
+    public event System.Action NightFalls;
     public int Night { get; private set; } = 1;
     public int Money { get; private set; }
     public int Film { get; private set; }
@@ -220,6 +224,8 @@ public class NightLoop : MonoBehaviour
     float dayLight = 1f;
     bool doorRequested;
     bool trapped;
+    bool introSeen;
+    int startedOnFrame = -1;
     Color goalColor;
     Coroutine moneyDisplay;
 
@@ -256,6 +262,38 @@ public class NightLoop : MonoBehaviour
         ShowTitle();
     }
 
+    /// <summary>From the pause menu: the run is given up, whatever was happening, and the title comes back.</summary>
+    public void QuitToTitle()
+    {
+        StopAllCoroutines();
+        if (AtDesk)
+            desk.Stand();
+        if (Peeping)
+            peephole.Close();
+        if (OnPhone)
+            phone.HangUp();
+        if (notes.Reading)
+            notes.Close();
+        if (safeLock.Busy)
+            safeLock.Close();
+        lostFace.SetActive(false);
+        trapped = false;
+        sleepRequested = false;
+        doorRequested = false;
+        fade.color = Color.clear;
+        HideMoney();
+        CurrentPhase = Phase.Day;
+        ResetRun();
+        ShowTitle();
+    }
+
+    void Begin()
+    {
+        Started = true;
+        startedOnFrame = Time.frameCount;
+        player.Frozen = false;
+    }
+
     void ShowTitle()
     {
         Started = false;
@@ -278,7 +316,7 @@ public class NightLoop : MonoBehaviour
 
         bool aiming = Started && CurrentPhase != Phase.Transition && !notes.Reading && !safeLock.Busy && !AtDesk && !Peeping && !OnPhone && aim.IsPressed();
         viewfinder.SetActive(aiming);
-        hand.enabled = Started && !aiming && !AtDesk && !Peeping && !OnPhone;
+        hand.enabled = Started && !aiming && !AtDesk && !Peeping && !OnPhone && !PauseMenu.Paused;
         view.fieldOfView = AtDesk ? desk.FieldOfView : aiming ? aimFieldOfView : normalFieldOfView;
         if (player.Whipping)
             view.fieldOfView = Mathf.Lerp(view.fieldOfView, player.WhipFieldOfView, player.WhipZoom);
@@ -296,11 +334,19 @@ public class NightLoop : MonoBehaviour
         if (!Started)
         {
             dot.color = dotIdle;
+            if (intro != null && intro.Showing)
+                return;
             if (interact.WasPressedThisFrame())
             {
-                Started = true;
                 titleScreen.SetActive(false);
-                player.Frozen = false;
+                // Once a session: whoever starts again after losing knows the job already.
+                if (intro != null && !introSeen)
+                {
+                    introSeen = true;
+                    intro.Show(goal, lastNightDoorOpens, Begin);
+                }
+                else
+                    Begin();
             }
             else if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
             {
@@ -329,8 +375,8 @@ public class NightLoop : MonoBehaviour
         dot.color = usable != null ? dotActive : dotIdle;
         UsePrompt = usable != null ? PromptFor(usable) : null;
 
-        // The E that stood you up from the desk must not sit you straight back down.
-        if (usable != null && interact.WasPressedThisFrame() && !(desk != null && desk.JustStood) && !(peephole != null && peephole.JustClosed))
+        // The E that stood you up from the desk must not sit you straight back down, nor the one that turned the last intro card put you to bed.
+        if (usable != null && interact.WasPressedThisFrame() && Time.frameCount != startedOnFrame && !(desk != null && desk.JustStood) && !(peephole != null && peephole.JustClosed))
             Use(usable);
         else if (aiming && shutter.WasPressedThisFrame() && Time.time >= nextPhotoTime)
         {
@@ -524,6 +570,7 @@ public class NightLoop : MonoBehaviour
             yield break;
         }
         SpawnAnomalies();
+        NightFalls?.Invoke();
         Film = filmPerNight + ExtraFilm;
         ExtraFilm = 0;
 
@@ -638,7 +685,7 @@ public class NightLoop : MonoBehaviour
         sound.PlayDoor();
         sound.PlayOutside();
         yield return FadeTo(daylight, 2f);
-        ShowCard("$" + Money, "ты ушёл", daylightText);
+        ShowCard("$" + Money, "ты ушла", daylightText);
         ShowNights(daylightText);
         yield return new WaitForSeconds(5f);
         HideMoney();
@@ -653,7 +700,7 @@ public class NightLoop : MonoBehaviour
             lostFace.SetActive(false);
             fade.color = Color.black;
             yield return new WaitForSeconds(1.2f);
-            ShowCard("", "не один", Color.white);
+            ShowCard("", "не одна", Color.white);
             yield return new WaitForSeconds(3f);
         }
         else
@@ -678,6 +725,7 @@ public class NightLoop : MonoBehaviour
             if (!anomaly.Active)
                 anomaly.Begin();
         }
+        NightFalls?.Invoke();
         Film = filmPerNight;
         look.FogNear = nightFogNear;
         look.FogFar = nightFogFar;
@@ -758,6 +806,15 @@ public class NightLoop : MonoBehaviour
         photoPrint.HauntOldPhotos(Night);
         NewTask();
         player.Teleport(wakePoint.position, wakePoint.eulerAngles.y, wakePitch);
+    }
+
+    /// <summary>The intro's look ahead: the room lit as at night, or back as on the first day.</summary>
+    public void PreviewNight(bool on)
+    {
+        look.FogNear = on ? nightFogNear : dayFogNear;
+        look.FogFar = on ? nightFogFar : dayFogFar;
+        SetLamp(on ? nightLampIntensity : dayIntensity, on ? nightBrightness : 1f);
+        SetDaylight(on ? 0f : 1f);
     }
 
     void SetDaylight(float amount)

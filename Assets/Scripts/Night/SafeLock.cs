@@ -79,6 +79,19 @@ public class SafeLock : MonoBehaviour
         closedParts.SetActive(true);
     }
 
+    /// <summary>Walks away from the lock or the film at once: the run is being left.</summary>
+    public void Close()
+    {
+        StopAllCoroutines();
+        lockScreen.SetActive(false);
+        filmScreen.SetActive(false);
+        face.SetActive(false);
+        figure.enabled = false;
+        inFilm = false;
+        Busy = false;
+        player.Frozen = false;
+    }
+
     public void Open()
     {
         Busy = true;

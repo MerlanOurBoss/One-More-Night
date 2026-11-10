@@ -12,6 +12,10 @@ public class FirstPersonController : MonoBehaviour
     [SerializeField] float maxPitch = 80f;
 
     public bool Frozen { get; set; }
+    /// <summary>Degrees per mouse count. Settings change it.</summary>
+    public float LookSensitivity { get => lookSensitivity; set => lookSensitivity = value; }
+    /// <summary>Mouse up looks down.</summary>
+    public bool InvertY { get; set; }
 
     CharacterController controller;
     InputAction move;
@@ -110,7 +114,7 @@ public class FirstPersonController : MonoBehaviour
 
         Vector2 lookDelta = look.ReadValue<Vector2>() * lookSensitivity;
         transform.Rotate(0f, lookDelta.x, 0f);
-        pitch = Mathf.Clamp(pitch - lookDelta.y, -maxPitch, maxPitch);
+        pitch = Mathf.Clamp(pitch - (InvertY ? -lookDelta.y : lookDelta.y), -maxPitch, maxPitch);
         view.localRotation = Quaternion.Euler(pitch, 0f, 0f);
 
         Vector2 input = move.ReadValue<Vector2>();

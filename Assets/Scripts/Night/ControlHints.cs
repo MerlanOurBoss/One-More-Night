@@ -47,7 +47,7 @@ public class ControlHints : MonoBehaviour
 
     string Pick()
     {
-        if (!loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy || loop.AtDesk || loop.Peeping || loop.OnPhone)
+        if (PauseMenu.Paused || !loop.Started || loop.CurrentPhase == NightLoop.Phase.Transition || safeLock.Busy || loop.AtDesk || loop.Peeping || loop.OnPhone)
             return "";
         if (notes.Reading)
             return "E закрыть";
@@ -61,7 +61,7 @@ public class ControlHints : MonoBehaviour
         switch (step)
         {
             case Step.Walk: return "WASD идти   Shift бежать";
-            case Step.Sleep: return "Ляг на кровать, когда будешь готов";
+            case Step.Sleep: return "Ляг на кровать, когда будешь готова";
             case Step.Aim: return night ? "Что-то изменилось. ПКМ поднять камеру" : "";
             case Step.Shoot:
                 if (!night)
