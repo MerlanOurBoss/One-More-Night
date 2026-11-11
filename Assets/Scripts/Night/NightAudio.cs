@@ -69,6 +69,9 @@ public class NightAudio : MonoBehaviour
     [SerializeField] float stalkerPitch = 0.82f;
     [SerializeField] Vector2 stalkerVolume = new Vector2(0.35f, 1f);
 
+    /// <summary>The intro's night cards bring the drone in before any night has begun.</summary>
+    public bool IntroNight { get; set; }
+
     Vector3 lastPlayerPosition;
     float stillSince;
     bool stalking;
@@ -111,7 +114,9 @@ public class NightAudio : MonoBehaviour
         // During a fade the room holds its breath.
         float tone = phase == NightLoop.Phase.Day ? roomToneDay : phase == NightLoop.Phase.Night ? roomToneNight : 0f;
         // The drone starts leaking into the day as the nights pile up.
-        float drone = phase == NightLoop.Phase.Night ? droneNight : phase == NightLoop.Phase.Day ? droneNight * loop.Lateness : 0f;
+        float drone = phase == NightLoop.Phase.Night || IntroNight ? droneNight : phase == NightLoop.Phase.Day ? droneNight * loop.Lateness : 0f;
+        if (IntroNight)
+            tone = roomToneNight;
         float step = fadePerSecond * Time.deltaTime;
         roomTone.volume = Mathf.MoveTowards(roomTone.volume, tone, step);
         nightDrone.volume = Mathf.MoveTowards(nightDrone.volume, drone, step);

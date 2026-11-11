@@ -25,6 +25,9 @@ public class IntroCards : MonoBehaviour
         [Tooltip("Stands in the shot at this stage, and is gone again when the intro ends.")]
         public Anomaly anomaly;
         public int stage = 1;
+        [Tooltip("Heard once, a moment into the card, from where the camera ends up looking.")]
+        public AudioClip sound;
+        public float soundDelay = 1f;
     }
 
     enum State { FadingIn, Card, FadingOut, Leaving }
@@ -68,6 +71,7 @@ public class IntroCards : MonoBehaviour
     string goal;
     string lastNight;
     Anomaly shown;
+    float soundAt = float.PositiveInfinity;
     Vector3 viewLocalPosition;
     Quaternion viewLocalRotation;
     Action onDone;
@@ -128,6 +132,11 @@ public class IntroCards : MonoBehaviour
 
         Drift();
         WriteText();
+        if (Time.time >= soundAt)
+        {
+            soundAt = float.PositiveInfinity;
+            AudioSource.PlayClipAtPoint(cards[index].sound, cards[index].lookTo);
+        }
         if (Time.frameCount != openedOnFrame && (state == State.FadingIn || state == State.Card))
             ReadInput();
     }
@@ -172,6 +181,8 @@ public class IntroCards : MonoBehaviour
     {
         Card card = cards[index];
         loop.PreviewNight(card.night);
+        sound.IntroNight = card.night;
+        soundAt = card.sound != null ? Time.time + card.soundDelay : float.PositiveInfinity;
         if (shown != null && shown != card.anomaly)
             shown.Clear();
         shown = card.anomaly;
@@ -264,6 +275,8 @@ public class IntroCards : MonoBehaviour
     void Restore()
     {
         loop.PreviewNight(false);
+        sound.IntroNight = false;
+        soundAt = float.PositiveInfinity;
         if (shown != null)
             shown.Clear();
         shown = null;
