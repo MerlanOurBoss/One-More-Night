@@ -32,6 +32,8 @@ public class SafeLock : MonoBehaviour
     [SerializeField] Vector3[] filmCorners = { new Vector3(-2f, 2.05f, -1.55f), new Vector3(-2f, 2.05f, 1.55f), new Vector3(2f, 2.05f, -1.55f), new Vector3(2f, 2.05f, 1.55f) };
     [Tooltip("Stands where the player stands, only for these photos.")]
     [SerializeField] Renderer figure;
+    [Tooltip("Once the film is seen, the photos show the player instead of her.")]
+    [SerializeField] PhotoPrint photos;
 
     readonly int[] wheels = new int[NoteCollection.CodeLength];
     InputAction move;
@@ -45,6 +47,8 @@ public class SafeLock : MonoBehaviour
     bool inFilm;
 
     public bool Busy { get; private set; }
+    /// <summary>Opened this run, and so its film seen.</summary>
+    public bool Opened => opened;
 
     public bool IsLocked(Collider target) => !opened && target == safe;
 
@@ -183,6 +187,9 @@ public class SafeLock : MonoBehaviour
         face.SetActive(false);
         yield return new WaitForSeconds(1.2f);
         filmCaption.gameObject.SetActive(true);
+        // From now on the figure on the photos is her.
+        if (photos != null)
+            photos.SelfOnPhotos = true;
         yield return new WaitForSeconds(3.5f);
 
         filmScreen.SetActive(false);

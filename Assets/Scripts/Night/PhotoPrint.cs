@@ -38,6 +38,8 @@ public class PhotoPrint : MonoBehaviour
     [SerializeField] Light flash;
     [Tooltip("Stands in the room only for the photo itself.")]
     [SerializeField] Renderer ghost;
+    [Tooltip("The player herself. Once she has seen the safe's film, she is who the photos show instead.")]
+    [SerializeField] Renderer self;
 
     [Header("Print")]
     [SerializeField] RectTransform paper;
@@ -73,6 +75,12 @@ public class PhotoPrint : MonoBehaviour
     readonly List<Shot> archive = new List<Shot>();
     public IReadOnlyList<Shot> Archive => archive;
 
+    /// <summary>From the safe's film on, the figure on the photos is the player, not the woman who lived here.</summary>
+    public bool SelfOnPhotos { get; set; }
+
+    // Who stands in tonight's photos. Her own old pictures always keep her.
+    Renderer Figure => SelfOnPhotos && self != null ? self : ghost;
+
     RenderTexture photo;
     InputAction lookAtPhoto;
     bool hasPhoto;
@@ -89,6 +97,8 @@ public class PhotoPrint : MonoBehaviour
         picture.uvRect = loop.PhotoFrame;
         flash.enabled = false;
         ghost.enabled = false;
+        if (self != null)
+            self.enabled = false;
         paper.anchoredPosition = hiddenPosition;
     }
 
@@ -118,7 +128,7 @@ public class PhotoPrint : MonoBehaviour
         bool caught = Random.value < Mathf.Min(ghostChanceMax, ghostChancePerNight * (loop.Night - 1)) && PlaceGhost(distance);
         if (caught)
             ghostsCaught++;
-        Render(photo, caught);
+        Render(photo, caught ? Figure : null);
 
         var copy = NewImage();
         Graphics.Blit(photo, copy);
@@ -146,20 +156,22 @@ public class PhotoPrint : MonoBehaviour
         }
     }
 
-    // The room as the camera sees it, lit by the flash, with or without her.
-    void Render(RenderTexture target, bool withGhost)
+    // The room as the camera sees it, lit by the flash, with whoever stands in it this once, or nobody.
+    void Render(RenderTexture target, Renderer figure)
     {
         RenderTexture screen = view.targetTexture;
         int everything = view.cullingMask;
         flash.enabled = true;
-        ghost.enabled = withGhost;
+        if (figure != null)
+            figure.enabled = true;
         view.targetTexture = target;
         view.cullingMask = everything & ~(1 << LayerMask.NameToLayer("UI"));
         view.Render();
         view.cullingMask = everything;
         view.targetTexture = screen;
         flash.enabled = false;
-        ghost.enabled = false;
+        if (figure != null)
+            figure.enabled = false;
     }
 
     // Puts the camera somewhere else for one render. The player never sees it move.
@@ -188,7 +200,7 @@ public class PhotoPrint : MonoBehaviour
             {
                 if (!PlaceGhost(distance))
                     return;
-                Render(shot.Image, true);
+                Render(shot.Image, Figure);
                 shot.Haunted++;
                 shot.Ghost = true;
             });
@@ -201,8 +213,8 @@ public class PhotoPrint : MonoBehaviour
         var image = NewImage();
         FromPose(eye, look, 60f, () =>
         {
-            ghost.transform.SetPositionAndRotation(feet, facing);
-            Render(image, true);
+            Figure.transform.SetPositionAndRotation(feet, facing);
+            Render(image, Figure);
         });
         var shot = new Shot { Image = image, Night = loop.Night, Ghost = true, Foreign = true, Eye = eye, Look = look, FieldOfView = 60f };
         Keep(shot);
@@ -217,7 +229,7 @@ public class PhotoPrint : MonoBehaviour
         FromPose(eye, Quaternion.LookRotation(lookAt - eye), 60f, () =>
         {
             ghost.transform.SetPositionAndRotation(feet, Quaternion.Euler(0f, ghostYaw, 0f));
-            Render(image, fits);
+            Render(image, fits ? ghost : null);
         });
         return image;
     }
@@ -256,6 +268,7 @@ public class PhotoPrint : MonoBehaviour
     {
         hasPhoto = false;
         ghostsCaught = 0;
+        SelfOnPhotos = false;
         ForgetAll();
         paper.anchoredPosition = hiddenPosition;
         paper.localScale = Vector3.one;
@@ -297,7 +310,7 @@ public class PhotoPrint : MonoBehaviour
                 // Seen, not hidden behind something.
                 if (Physics.Linecast(eye, feet + Vector3.up * 1.3f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
                     continue;
-                ghost.transform.SetPositionAndRotation(feet, Quaternion.LookRotation(-aim));
+                Figure.transform.SetPositionAndRotation(feet, Quaternion.LookRotation(-aim));
                 return true;
             }
         }

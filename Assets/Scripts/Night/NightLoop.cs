@@ -61,9 +61,13 @@ public class NightLoop : MonoBehaviour
     [SerializeField] GameObject titleScreen;
     [Tooltip("What the job is, before the first day. Shown once a session.")]
     [SerializeField] IntroCards intro;
+    [SerializeField] TitleDrift titleDrift;
 
     [Header("Anomalies")]
     [SerializeField] Anomaly[] anomalies;
+    [Tooltip("The player herself, standing where the woman before her stood on her last photo. One of the anomalies above, but never picked at random: " +
+             "only on the last night out, and only once the safe's film has been seen.")]
+    [SerializeField] Anomaly self;
     [SerializeField] int reportReward = 10000;
     [SerializeField] int reportRewardPerNight = 2000;
     [SerializeField] int falseReportFine = 5000;
@@ -338,6 +342,8 @@ public class NightLoop : MonoBehaviour
                 return;
             if (interact.WasPressedThisFrame())
             {
+                if (titleDrift != null)
+                    titleDrift.Stop();
                 titleScreen.SetActive(false);
                 // Once a session: whoever starts again after losing knows the job already.
                 if (intro != null && !introSeen)
@@ -570,6 +576,9 @@ public class NightLoop : MonoBehaviour
             yield break;
         }
         SpawnAnomalies();
+        // The last night the door still lets you out: you are already standing in the flat, as she once did.
+        if (self != null && !self.Active && safeLock.Opened && Night == lastNightDoorOpens)
+            self.Begin();
         NightFalls?.Invoke();
         Film = filmPerNight + ExtraFilm;
         ExtraFilm = 0;
@@ -608,7 +617,7 @@ public class NightLoop : MonoBehaviour
         var calm = new List<Anomaly>();
         foreach (Anomaly anomaly in anomalies)
         {
-            if (!anomaly.Active && anomaly.FirstNight <= Night)
+            if (!anomaly.Active && anomaly.FirstNight <= Night && anomaly != self)
                 calm.Add(anomaly);
         }
 
@@ -722,7 +731,8 @@ public class NightLoop : MonoBehaviour
 
         foreach (Anomaly anomaly in anomalies)
         {
-            if (!anomaly.Active)
+            // She is only in it if the film has shown her who she is.
+            if (!anomaly.Active && (anomaly != self || safeLock.Opened))
                 anomaly.Begin();
         }
         NightFalls?.Invoke();
