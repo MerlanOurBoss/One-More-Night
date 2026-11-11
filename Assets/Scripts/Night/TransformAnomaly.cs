@@ -66,6 +66,8 @@ public class TransformAnomaly : Anomaly
     /// <summary>At its last stage it stands as wide as it goes, and there is nothing left to do with it.</summary>
     public bool OpensByHand => opensByHand && shownStage < stages.Length;
     public bool OpenedByHand => handOpen;
+    /// <summary>A door the player can open at all, whatever its stage.</summary>
+    public bool HandDoor => opensByHand;
 
     void Awake()
     {
@@ -130,6 +132,16 @@ public class TransformAnomaly : Anomaly
         AudioClip clip = handOpen ? openClip : closeClip;
         if (clip != null)
             AudioSource.PlayClipAtPoint(clip, Center);
+    }
+
+    /// <summary>Shut by nobody, while nobody looked: no sound, no hurry. Back to what its stage holds it at.</summary>
+    public void ShutQuietly(float seconds)
+    {
+        if (!handOpen)
+            return;
+        handOpen = false;
+        ShowExtras(shownStage);
+        SwingToShownPose(seconds);
     }
 
     void SwingToShownPose(float seconds)
