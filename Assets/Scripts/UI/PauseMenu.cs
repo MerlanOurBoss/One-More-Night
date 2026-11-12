@@ -11,6 +11,8 @@ public class PauseMenu : MonoBehaviour
     const string VolumeKey = "settings.volume";
     const string SensitivityKey = "settings.sensitivity";
     const string InvertKey = "settings.invertY";
+    const string BrightnessKey = "settings.brightness";
+    static readonly int BrightnessId = Shader.PropertyToID("_PS1Brightness");
 
     enum Page { Main, Settings }
 
@@ -31,6 +33,9 @@ public class PauseMenu : MonoBehaviour
     [SerializeField] float sensitivityMin = 0.25f;
     [SerializeField] float sensitivityMax = 3f;
     [SerializeField] float sensitivityStep = 0.25f;
+    [Tooltip("Brightness steps either side of 0: above it the dark parts lift, below it they sink. Black stays black.")]
+    [SerializeField] int brightnessMin = -5;
+    [SerializeField] int brightnessMax = 10;
 
     /// <summary>While true, nothing in the game should take input of its own.</summary>
     public static bool Paused { get; private set; }
@@ -44,6 +49,7 @@ public class PauseMenu : MonoBehaviour
     float volume = 1f;
     float sensitivity = 1f;
     bool invertY;
+    int brightness;
     Vector2 lastMouse;
 
     void Awake()
@@ -53,6 +59,7 @@ public class PauseMenu : MonoBehaviour
         volume = PlayerPrefs.GetFloat(VolumeKey, 1f);
         sensitivity = PlayerPrefs.GetFloat(SensitivityKey, 1f);
         invertY = PlayerPrefs.GetInt(InvertKey, 0) == 1;
+        brightness = PlayerPrefs.GetInt(BrightnessKey, 0);
         ApplySettings();
         clicks.ignoreListenerPause = true;
         screen.SetActive(false);
@@ -161,10 +168,10 @@ public class PauseMenu : MonoBehaviour
         screen.SetActive(false);
     }
 
-    // Both pages have four lines.
-    const int RowCount = 4;
+    int RowCount => page == Page.Main ? 4 : 5;
 
-    bool IsValueRow(int row) => page == Page.Settings && row < 3;
+    // Settings: every line but the last, Back, holds a value.
+    bool IsValueRow(int row) => page == Page.Settings && row < 4;
 
     void OpenPage(Page next, int row)
     {
@@ -192,7 +199,7 @@ public class PauseMenu : MonoBehaviour
     {
         if (page == Page.Settings)
         {
-            if (selection == 3)
+            if (selection == 4)
             {
                 OpenPage(Page.Main, 1);
                 Click();
@@ -242,14 +249,18 @@ public class PauseMenu : MonoBehaviour
                 volume = Mathf.Clamp01(Mathf.Round((volume + 0.1f * direction) * 10f) / 10f);
                 break;
             case 1:
-                sensitivity = Mathf.Clamp(sensitivity + sensitivityStep * direction, sensitivityMin, sensitivityMax);
+                brightness = Mathf.Clamp(brightness + direction, brightnessMin, brightnessMax);
                 break;
             case 2:
+                sensitivity = Mathf.Clamp(sensitivity + sensitivityStep * direction, sensitivityMin, sensitivityMax);
+                break;
+            case 3:
                 invertY = !invertY;
                 break;
         }
         ApplySettings();
         PlayerPrefs.SetFloat(VolumeKey, volume);
+        PlayerPrefs.SetInt(BrightnessKey, brightness);
         PlayerPrefs.SetFloat(SensitivityKey, sensitivity);
         PlayerPrefs.SetInt(InvertKey, invertY ? 1 : 0);
         PlayerPrefs.Save();
@@ -260,6 +271,7 @@ public class PauseMenu : MonoBehaviour
     void ApplySettings()
     {
         AudioListener.volume = volume;
+        Shader.SetGlobalFloat(BrightnessId, brightness * 0.1f);
         player.LookSensitivity = baseSensitivity * sensitivity;
         player.InvertY = invertY;
     }
@@ -268,8 +280,8 @@ public class PauseMenu : MonoBehaviour
     {
         string[] labels = page == Page.Main
             ? new[] { "Продолжить", "Настройки", confirming == 2 ? "Выйти в меню? Забег пропадёт" : "Выйти в меню", confirming == 3 ? "Выйти из игры? Забег пропадёт" : "Выйти из игры" }
-            // The pixel font has no < >: guillemets mark what A/D turn.
-            : new[] { "Громкость   « " + Mathf.RoundToInt(volume * 100f) + "% »", "Чувствительность мыши   « " + sensitivity.ToString("0.00") + " »", "Инверсия мыши   « " + (invertY ? "вкл" : "выкл") + " »", "Назад" };
+            // The pixel font has no < > or +: guillemets mark what A/D turn.
+            : new[] { "Громкость   « " + Mathf.RoundToInt(volume * 100f) + "% »", "Яркость   « " + brightness + " »", "Чувствительность мыши   « " + sensitivity.ToString("0.00") + " »", "Инверсия мыши   « " + (invertY ? "вкл" : "выкл") + " »", "Назад" };
         for (int i = 0; i < labels.Length && i < rows.Length; i++)
         {
             rows[i].text = labels[i];

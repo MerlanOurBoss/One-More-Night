@@ -28,6 +28,8 @@ Shader "OneMoreNight/PS1 Output"
             float4 _MainTex_TexelSize;
             float _Levels;
             float _Dither;
+            // Global, from the settings: 0 leaves the image as it is, above 0 lifts the dark, below 0 sinks it. Black stays black.
+            float _PS1Brightness;
 
             static const float Bayer[16] = { 0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5 };
 
@@ -35,6 +37,7 @@ Shader "OneMoreNight/PS1 Output"
             {
                 // Levels are counted in gamma space, as a display would show them.
                 float3 color = LinearToGammaSpace(tex2D(_MainTex, input.uv).rgb);
+                color = pow(max(color, 0.0), exp2(-_PS1Brightness));
 
                 int2 pixel = int2(floor(input.uv * _MainTex_TexelSize.zw)) & 3;
                 float threshold = (Bayer[pixel.y * 4 + pixel.x] + 0.5) / 16.0 - 0.5;
