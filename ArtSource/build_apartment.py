@@ -1178,8 +1178,51 @@ for z, top, glass, lid in ((1.19, 1.78, (0.78, 0.68, 0.36), (0.8, 0.8, 0.78)), (
 SKIN_UV = (0.52, 0.02)
 
 
-def build_woman(part, ox, oz, pale=1.0):
+def build_woman(part, ox, oz, pale=1.0, sitting=False):
+    # Sitting: on a seat SEAT high, the legs bend forward at the hip and down again at the knee, feet on the floor;
+    # everything above the hip leans forward and comes down onto the seat, the arms hang straight from the shoulders.
+    HIP = 0.9
+    SEAT = 0.49                  # the kitchen stools
+    LEAN = math.radians(12)
+    R_HIP = R_KNEE = 0.05
+    THIGH_Y = SEAT + 0.05        # centre line of the thighs, resting on the seat
+    SHIN = THIGH_Y - R_KNEE      # straight, from the knee's bend down to the floor
+    THIGH = HIP - SHIN - math.pi / 2 * (R_HIP + R_KNEE)
+    DROP = HIP - R_HIP - THIGH_Y
+
+    def upper(v):
+        dy, dz = v[1] - HIP, v[2]
+        return (v[0], HIP + dy * math.cos(LEAN) - dz * math.sin(LEAN) - DROP, dy * math.sin(LEAN) + dz * math.cos(LEAN))
+
+    def legs(v):
+        """Walks s down the bent leg: two quarter circles with the thigh between them. dz, in front of the leg's line, stays in front of it."""
+        if v[1] >= HIP:
+            return upper(v)
+        s, dz = HIP - v[1], v[2]
+        p, t, n = (HIP, 0.0), (-1.0, 0.0), (0.0, 1.0)    # (y, z): where the line is, which way it runs, which way is its front
+        for r, length, sign in ((R_HIP, None, 1), (0, THIGH, 0), (R_KNEE, None, -1), (0, float("inf"), 0)):
+            step = min(s, length if r == 0 else math.pi / 2 * r)
+            if r == 0:
+                p = (p[0] + t[0] * step, p[1] + t[1] * step)
+            else:
+                c, sn = math.cos(step / r), math.sin(step / r)
+                p = (p[0] + r * (sign * n[0] * (1 - c) + t[0] * sn), p[1] + r * (sign * n[1] * (1 - c) + t[1] * sn))
+                t, n = (t[0] * c + sign * n[0] * sn, t[1] * c + sign * n[1] * sn), (n[0] * c - sign * t[0] * sn, n[1] * c - sign * t[1] * sn)
+            s -= step
+            if s <= 0:
+                break
+        return (v[0], p[0] + n[0] * dz - DROP, p[1] + n[1] * dz)
+
+    SHOULDER = (0.0, 1.33, 0.0)
+    shoulder_moved = upper(SHOULDER)
+
+    def arm(v):
+        return (v[0], v[1] + shoulder_moved[1] - SHOULDER[1], v[2] + shoulder_moved[2] - SHOULDER[2])
+
+    shape = [lambda v: v]
+
     def place(v):
+        v = shape[0](v)
         return (ox + v[0], v[1], oz + v[2])
 
     def add(a, b, t=1.0):
@@ -1211,6 +1254,11 @@ def build_woman(part, ox, oz, pale=1.0):
     dress = [(0.1, 0.25, 0.2, 0.012), (0.22, 0.235, 0.18, 0.01), (0.42, 0.205, 0.155, 0.006), (0.62, 0.18, 0.135, 0.003),
              (0.8, 0.165, 0.12, 0.0), (0.97, 0.125, 0.092, 0.0), (1.14, 0.14, 0.1, 0.008), (1.27, 0.155, 0.1, 0.012),
              (1.36, 0.16, 0.08, 0.005), (1.42, 0.08, 0.06, 0.008)]
+    if sitting:
+        # one more ring in each bend, so the lap and the knees come out round
+        dress += [(0.53, 0.191, 0.144, 0.0045), (0.88, 0.146, 0.106, 0.0)]
+        dress.sort()
+        shape[0] = legs
     rows, centers = [], []
     n = 14
     for y, rx, rz, zc in dress:
@@ -1246,6 +1294,8 @@ def build_woman(part, ox, oz, pale=1.0):
         part.cap(v[-1], place((lx + side * 0.01, 0.008, 0.175)), SKIN_UV, tint((0.5, 0.42, 0.42)), place((lx, 0.02, 0.05)))
 
     # --- Arms hanging too long, hands past the hips. The nails and fingertips are torn.
+    if sitting:
+        shape[0] = arm
     for side, drop in ((-1, 0.0), (1, 0.04)):
         wrist = (side * 0.232, 0.6 - drop, 0.03)
         limb([((side * 0.125, 1.33, 0.0), 0.034), ((side * 0.18, 1.12, -0.008), 0.03), ((side * 0.21, 0.95, -0.004), 0.027),
@@ -1272,6 +1322,8 @@ def build_woman(part, ox, oz, pale=1.0):
              lambda j: tint((1, 1, 1), 0.95) if j < 2 else (0.3, 0.05, 0.04))
 
     # --- Neck and bowed head: tipped forward and over to one side.
+    if sitting:
+        shape[0] = upper
     HEAD = (0.03, 1.585, 0.05)
     bow, roll = math.radians(24), math.radians(-11)
 
@@ -1320,6 +1372,9 @@ def build_woman(part, ox, oz, pale=1.0):
 
 build_woman(Part("Figure_Corner", material("M_Figure")), -0.42, -3.35, pale=0.86)   # clear of the hall wardrobe
 build_woman(Part("Figure_Lens", material("M_Figure")), 0.0, 0.0, pale=1.0)
+# On the kitchen computer's stool, built at the origin facing +Z; the scene turns her to the screen.
+# Her head is Head.fbx too: its chin goes at (0.009, 1.153, 0.12) from her origin, before that turn.
+build_woman(Part("Figure_Desk", material("M_Figure")), 0.0, 0.0, pale=0.93, sitting=True)
 
 # ---------------------------------------------------------------- finish our own parts
 def finish(part):
