@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 /// <summary>The print that comes out of the camera. It keeps what the room looked like, and sometimes something the room did not show you.</summary>
@@ -29,6 +30,10 @@ public class PhotoPrint : MonoBehaviour
         public Vector3 Eye;
         public Quaternion Look;
         public float FieldOfView;
+        /// <summary>How the flat was lit when it was taken, so she is lit the same when she turns up on it.</summary>
+        public NightLoop.Lighting Lighting;
+        /// <summary>The photo as it came out, before she was ever on it. Kept from the first time it changes.</summary>
+        public byte[] Clean;
     }
 
     [Header("Scene")]
@@ -135,7 +140,7 @@ public class PhotoPrint : MonoBehaviour
         Keep(new Shot
         {
             Image = copy, Night = loop.Night, Found = found, Room = room, ForTask = loop.IsTaskRoom(room), Ghost = caught, Day = loop.CurrentPhase == NightLoop.Phase.Day,
-            Eye = view.transform.position, Look = view.transform.rotation, FieldOfView = view.fieldOfView,
+            Eye = view.transform.position, Look = view.transform.rotation, FieldOfView = view.fieldOfView, Lighting = loop.CurrentLighting,
         });
 
         hasPhoto = true;
@@ -188,23 +193,115 @@ public class PhotoPrint : MonoBehaviour
         view.fieldOfView = fov;
     }
 
-    /// <summary>Each morning: an old empty photo may now show her, a little closer every time it changes.</summary>
+    /// <summary>Each morning: an old empty photo may now show her, a little closer every time it changes.
+    /// Only she is new on it: the rest stays as it was taken, in the light it was taken in.</summary>
     public void HauntOldPhotos(int night)
     {
         foreach (Shot shot in archive)
         {
             if (shot.Found > 0 || shot.Foreign || shot.Haunted >= hauntAtMost || night - shot.Night < hauntAfterNights || Random.value > hauntChance)
                 continue;
-            float distance = Mathf.Max(ghostNearest, hauntFirstDistance - hauntCloserEachTime * shot.Haunted);
-            FromPose(shot.Eye, shot.Look, shot.FieldOfView, () =>
-            {
-                if (!PlaceGhost(distance))
-                    return;
-                Render(shot.Image, Figure);
-                shot.Haunted++;
-                shot.Ghost = true;
-            });
+            byte[] haunted = WithHer(shot, Mathf.Max(ghostNearest, hauntFirstDistance - hauntCloserEachTime * shot.Haunted));
+            if (haunted == null)
+                continue;
+            Upload(haunted, shot.Image);
+            shot.Haunted++;
+            shot.Ghost = true;
         }
+    }
+
+    /// <summary>The photo as it first came out, before she was ever on it, as stored bytes.</summary>
+    public byte[] CleanOf(Shot shot) => shot.Clean ??= Read(shot.Image);
+
+    /// <summary>The photo as it first came out with her on it this time, about this far from the lens, in the light it was taken in. Null if it has no room for her.</summary>
+    public byte[] WithHer(Shot shot, float distance)
+    {
+        byte[] clean = CleanOf(shot);
+        byte[] result = null;
+        NightLoop.Lighting now = loop.CurrentLighting;
+        loop.Relight(shot.Lighting);
+        FromPose(shot.Eye, shot.Look, shot.FieldOfView, () =>
+        {
+            if (PlaceGhost(distance))
+                result = FigureOver(clean);
+        });
+        loop.Relight(now);
+        return result;
+    }
+
+    /// <summary>A photo of the flat as it is now, from here, in the night's light, never kept: for when the player has taken too few of her own.</summary>
+    public Shot Unseen(Vector3 eye, Vector3 lookAt)
+    {
+        var shot = new Shot { Eye = eye, Look = Quaternion.LookRotation(lookAt - eye), FieldOfView = 60f, Lighting = loop.NightLighting, Night = loop.Night };
+        shot.Clean = Shoot(shot.Eye, shot.Look, shot.Lighting, null, Vector3.zero, Quaternion.identity);
+        return shot;
+    }
+
+    /// <summary>The player asleep, from up by the ceiling, in the night's light: the photo nobody could have taken.</summary>
+    public byte[] Asleep(Vector3 eye, Vector3 lookAt, Vector3 lie, Quaternion lying) =>
+        Shoot(eye, Quaternion.LookRotation(lookAt - eye), loop.NightLighting, self != null ? self : ghost, lie, lying);
+
+    // One render from a pose and a light, with a figure placed for it or nobody, as stored bytes.
+    byte[] Shoot(Vector3 eye, Quaternion look, NightLoop.Lighting lighting, Renderer figure, Vector3 at, Quaternion facing)
+    {
+        RenderTexture image = RenderTexture.GetTemporary(photo.descriptor);
+        NightLoop.Lighting now = loop.CurrentLighting;
+        loop.Relight(lighting);
+        FromPose(eye, look, 60f, () =>
+        {
+            if (figure != null)
+                figure.transform.SetPositionAndRotation(at, facing);
+            Render(image, figure);
+        });
+        loop.Relight(now);
+        byte[] pixels = Read(image);
+        RenderTexture.ReleaseTemporary(image);
+        return pixels;
+    }
+
+    /// <summary>The size of a photo in pixels, the whole frame and not just the part inside the viewfinder.</summary>
+    public Vector2Int Size => new Vector2Int(photo.width, photo.height);
+
+    // The flat has moved on since the photo was taken: doors, anomalies, the time of day. So the room is drawn twice, without her and with her,
+    // and only the pixels where the two differ, which are her, go onto the photo as it first came out. Called from the photo's pose, in its light.
+    byte[] FigureOver(byte[] clean)
+    {
+        RenderTexture without = RenderTexture.GetTemporary(photo.descriptor);
+        RenderTexture with = RenderTexture.GetTemporary(photo.descriptor);
+        Render(without, null);
+        Render(with, Figure);
+        byte[] room = Read(without);
+        byte[] her = Read(with);
+        RenderTexture.ReleaseTemporary(without);
+        RenderTexture.ReleaseTemporary(with);
+
+        byte[] result = (byte[])clean.Clone();
+        for (int i = 0; i < result.Length; i += 4)
+        {
+            if (room[i] == her[i] && room[i + 1] == her[i + 1] && room[i + 2] == her[i + 2])
+                continue;
+            result[i] = her[i];
+            result[i + 1] = her[i + 1];
+            result[i + 2] = her[i + 2];
+        }
+        return result;
+    }
+
+    static void Upload(byte[] pixels, RenderTexture image)
+    {
+        var upload = new Texture2D(image.width, image.height, image.graphicsFormat, TextureCreationFlags.None);
+        upload.SetPixelData(pixels, 0);
+        upload.Apply(false);
+        Graphics.CopyTexture(upload, image);
+        Destroy(upload);
+    }
+
+    // The bytes as they are stored, with no colour conversion either way.
+    static byte[] Read(RenderTexture image)
+    {
+        AsyncGPUReadbackRequest request = AsyncGPUReadback.Request(image);
+        request.WaitForCompletion();
+        return request.GetData<byte>().ToArray();
     }
 
     /// <summary>A photo from where nobody stood: her, standing where the player stands.</summary>

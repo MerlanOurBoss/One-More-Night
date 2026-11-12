@@ -22,6 +22,8 @@ public class ComputerDesk : MonoBehaviour
     [SerializeField] Renderer screen;
     [SerializeField] Texture desktop;
     [SerializeField] Text caption;
+    [Tooltip("Whoever may be sitting on its stool instead of the player.")]
+    [SerializeField] DeskSitter occupant;
 
     [Header("Sitting")]
     [SerializeField] Vector3 seat = new Vector3(-0.5f, 0f, 2.38f);
@@ -97,6 +99,8 @@ public class ComputerDesk : MonoBehaviour
     float turnOnAt;
 
     public bool Seated { get; private set; }
+    /// <summary>Nobody on its stool: the player can sit down.</summary>
+    public bool Vacant => occupant == null || !occupant.AtDesk;
     public float FieldOfView => fieldOfView;
     /// <summary>True on the frame the player got up, so the same E does not sit them down again.</summary>
     public bool JustStood => Time.frameCount == stoodOnFrame;
@@ -114,6 +118,18 @@ public class ComputerDesk : MonoBehaviour
         screenMaterial = screen.material;
         caption.gameObject.SetActive(false);
         ShowDesktop();
+    }
+
+    // Her pictures show the flat before anything in it went wrong, at night, as she worked: drawn now, while it still is.
+    void Start()
+    {
+        NightLoop.Lighting now = loop.CurrentLighting;
+        loop.Relight(loop.NightLighting);
+        herImages = new RenderTexture[herEyes.Length];
+        for (int i = 0; i < herEyes.Length; i++)
+            herImages[i] = photos.Stage(herEyes[i], herTargets[i], herGhosts[i].y >= 0f, herGhosts[i], herGhostYaws[i]);
+        lastImage = photos.Stage(lastEye, lastTarget, true, lastGhost, lastGhostYaw);
+        loop.Relight(now);
     }
 
     void OnDestroy()
@@ -466,13 +482,6 @@ public class ComputerDesk : MonoBehaviour
 
     void ShowHers(string note)
     {
-        if (herImages == null || herImages.Length != herEyes.Length)
-        {
-            herImages = new RenderTexture[herEyes.Length];
-            for (int i = 0; i < herEyes.Length; i++)
-                herImages[i] = photos.Stage(herEyes[i], herTargets[i], herGhosts[i].y >= 0f, herGhosts[i], herGhostYaws[i]);
-        }
-
         string zoom = zoomSteps[zoomStep] > 1f ? ", ближе в " + zoomSteps[zoomStep] + " раза" : "";
         if (!OnLockedFile)
         {
@@ -492,8 +501,6 @@ public class ComputerDesk : MonoBehaviour
             return;
         }
 
-        if (lastImage == null)
-            lastImage = photos.Stage(lastEye, lastTarget, true, lastGhost, lastGhostYaw);
         ShowImage(lastImage, true);
         caption.text = "её папка, последний снимок" + zoom + "\nA/D листать   ЛКМ ближе\nF мои снимки   E встать";
     }

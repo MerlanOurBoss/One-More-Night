@@ -9,6 +9,13 @@ public class NightLoop : MonoBehaviour
 {
     public enum Phase { Day, Night, Transition }
 
+    /// <summary>How the flat is lit at one moment: enough to light a photo again the way it was taken.</summary>
+    public struct Lighting
+    {
+        public float FogNear, FogFar, Lamp, Brightness, Daylight;
+        public Color LampColor;
+    }
+
     static readonly int EmissionId = Shader.PropertyToID("_Emission");
     static readonly int IntensityId = Shader.PropertyToID("_Intensity");
 
@@ -148,6 +155,30 @@ public class NightLoop : MonoBehaviour
     public int FilmPrice => filmPrice;
     public int FilmPack => filmPack;
 
+    /// <summary>The flat as it is lit right now.</summary>
+    public Lighting CurrentLighting => new Lighting
+    {
+        FogNear = look.FogNear, FogFar = look.FogFar, Lamp = lamp.intensity, LampColor = lamp.color, Brightness = brightness, Daylight = daylightNow,
+    };
+
+    /// <summary>An ordinary night's light, in the lamp's colour of the moment.</summary>
+    public Lighting NightLighting => new Lighting
+    {
+        FogNear = nightFogNear, FogFar = nightFogFar, Lamp = nightLampIntensity, LampColor = lamp.color, Brightness = nightBrightness, Daylight = 0f,
+    };
+
+    /// <summary>Lights the flat this way at once, for a render in this same frame. Put back what CurrentLighting gave before the frame is over.</summary>
+    public void Relight(Lighting lighting)
+    {
+        look.FogNear = lighting.FogNear;
+        look.FogFar = lighting.FogFar;
+        look.Apply();
+        lamp.color = lighting.LampColor;
+        SetLamp(lighting.Lamp, lighting.Brightness);
+        FollowLamp();
+        SetDaylight(lighting.Daylight);
+    }
+
     // The four rooms on the plan, and how the client names each one.
     static readonly string[] RoomIds = { "kitchen", "bedroom", "bath", "hall" };
     static readonly string[] RoomNames = { "на кухне", "в зале", "в ванной", "в коридоре" };
@@ -226,6 +257,7 @@ public class NightLoop : MonoBehaviour
     bool dayTimed;
     float dayLeft;
     float dayLight = 1f;
+    float daylightNow;
     bool doorRequested;
     bool trapped;
     bool introSeen;
@@ -309,12 +341,7 @@ public class NightLoop : MonoBehaviour
     {
         UsePrompt = null;
         // Every frame so the lampshade follows the light, including a lamp anomaly.
-        shade.SetColor(EmissionId, lamp.color * brightness);
-        for (int i = 0; i < moreLamps.Length; i++)
-        {
-            moreLamps[i].color = lamp.color;
-            moreLamps[i].intensity = lamp.intensity * moreLampShares[i];
-        }
+        FollowLamp();
         hand.color = new Color(brightness, brightness, brightness, 1f);
         look.Jitter = JitterNearAnomalies();
 
@@ -412,7 +439,8 @@ public class NightLoop : MonoBehaviour
             return null;
         bool day = CurrentPhase == Phase.Day;
         TransformAnomaly handDoor = hit.collider.GetComponent<TransformAnomaly>();
-        bool usable = hit.collider == futon || (handDoor != null && handDoor.OpensByHand) || hit.collider.GetComponent<DoorSwing>() != null || hit.collider.GetComponent<ComputerDesk>() != null || hit.collider.GetComponent<DoorPeephole>() != null || (phone != null && hit.collider == phone.GetComponent<Collider>() && phone.Ringing) || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
+        ComputerDesk computer = hit.collider.GetComponent<ComputerDesk>();
+        bool usable = hit.collider == futon || (handDoor != null && handDoor.OpensByHand) || hit.collider.GetComponent<DoorSwing>() != null || (computer != null && computer.Vacant) || hit.collider.GetComponent<DoorPeephole>() != null || (phone != null && hit.collider == phone.GetComponent<Collider>() && phone.Ringing) || notes.IsNote(hit.collider) || (day && safeLock.IsLocked(hit.collider)) || (hit.collider == door && (day || trapped));
         return usable ? hit.collider : null;
     }
 
@@ -827,8 +855,20 @@ public class NightLoop : MonoBehaviour
         SetDaylight(on ? 0f : 1f);
     }
 
+    // The shade and the other rooms' lamps go with the main lamp.
+    void FollowLamp()
+    {
+        shade.SetColor(EmissionId, lamp.color * brightness);
+        for (int i = 0; i < moreLamps.Length; i++)
+        {
+            moreLamps[i].color = lamp.color;
+            moreLamps[i].intensity = lamp.intensity * moreLampShares[i];
+        }
+    }
+
     void SetDaylight(float amount)
     {
+        daylightNow = amount;
         pane.SetColor(EmissionId, skyColor * amount);
         windowLight.intensity = windowLightIntensity * amount;
         windowLight.enabled = amount > 0f;

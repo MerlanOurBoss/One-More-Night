@@ -22,7 +22,8 @@ public class PS1Globals : MonoBehaviour
     void OnValidate() => Apply();
     void Update() => Apply();
 
-    void Apply()
+    /// <summary>Called by itself every frame; call it to have a change count for a render this same frame.</summary>
+    public void Apply()
     {
         // Clip space spans 2 units, so one low-res pixel is 2 / resolution.
         Shader.SetGlobalVector("_PS1SnapGrid", (Vector2)resolution / (2f * Jitter));
